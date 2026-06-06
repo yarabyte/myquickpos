@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
-import { requireTenantId } from "@/lib/auth"
+import { requireTenantId, requireTabletManage } from "@/lib/auth"
 import { establishmentRepository } from "@/lib/repositories/establishment.repository"
 
 const createEstablishmentSchema = z.object({
@@ -17,6 +17,7 @@ export type ActionResult<T = unknown> = { success: true; data: T } | { success: 
 
 export async function createEstablishment(formData: FormData): Promise<ActionResult> {
   try {
+    await requireTabletManage()
     const tenantId = await requireTenantId()
     const parsed = createEstablishmentSchema.safeParse(Object.fromEntries(formData))
     if (!parsed.success) {
@@ -36,6 +37,7 @@ export async function createEstablishment(formData: FormData): Promise<ActionRes
 
 export async function updateEstablishment(id: string, formData: FormData): Promise<ActionResult> {
   try {
+    await requireTabletManage()
     const tenantId = await requireTenantId()
     const parsed = updateEstablishmentSchema.safeParse(Object.fromEntries(formData))
     if (!parsed.success) {
@@ -52,6 +54,7 @@ export async function updateEstablishment(id: string, formData: FormData): Promi
 
 export async function deleteEstablishment(id: string): Promise<ActionResult> {
   try {
+    await requireTabletManage()
     const tenantId = await requireTenantId()
     await establishmentRepository.delete(id, tenantId)
     revalidatePath("/admin/tablet")

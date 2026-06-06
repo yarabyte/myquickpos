@@ -6,6 +6,7 @@ const DEFAULT_FOOTER = `<p style="text-align: center">Thank you for your purchas
 export type TenantSettingsJson = {
   currency?: string
   taxRate?: number
+  rolePermissions?: Partial<Record<string, string[]>>
   printer?: {
     paperWidth?: "58mm" | "80mm"
     autoPrint?: boolean
@@ -103,5 +104,37 @@ export const tenantRepository = {
       },
     })
     return this.getSettings(tenantId)
+  },
+
+  async getRolePermissions(tenantId: string) {
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { settings: true },
+    })
+    if (!tenant) return null
+    const settings = (tenant.settings ?? {}) as TenantSettingsJson
+    return settings.rolePermissions ?? null
+  },
+
+  async updateRolePermissions(
+    tenantId: string,
+    rolePermissions: TenantSettingsJson["rolePermissions"]
+  ) {
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { settings: true },
+    })
+    if (!tenant) return null
+    const current = (tenant.settings ?? {}) as TenantSettingsJson
+    await prisma.tenant.update({
+      where: { id: tenantId },
+      data: {
+        settings: {
+          ...current,
+          rolePermissions,
+        },
+      },
+    })
+    return rolePermissions ?? null
   },
 }

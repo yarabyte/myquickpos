@@ -17,7 +17,12 @@ import {
 } from "@/components/ui/select"
 import { toTitleCase } from "@/lib/utils"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { signIn } from "next-auth/react"
+import { signIn, getSession } from "next-auth/react"
+import {
+  firstAllowedAdminRoute,
+  hasPermission,
+  sessionPermissionsFromUser,
+} from "@/lib/permissions"
 import {
   clearRememberedLogin,
   loadRememberedLogin,
@@ -120,7 +125,25 @@ export function LoginForm({ tenants }: LoginFormProps) {
 
       setTenantSelectOpen(false)
       releaseUiLock()
-      router.push(callbackUrl)
+
+      const session = await getSession()
+      const user = session?.user as { role?: string; permissions?: string[] } | undefined
+      const permissions = sessionPermissionsFromUser(user ?? {})
+      let target = callbackUrl
+
+      if (!searchParams.get("callbackUrl")) {
+        if (user?.role === "CASHIER") {
+          target = "/pos"
+        } else if (user?.role === "SERVER") {
+          target = firstAllowedAdminRoute(permissions) ?? "/admin/tablet"
+        } else if (!permissions.some((p) => p.startsWith("admin.")) && hasPermission(permissions, "pos.access")) {
+          target = "/pos"
+        } else {
+          target = firstAllowedAdminRoute(permissions) ?? "/admin"
+        }
+      }
+
+      router.push(target)
       router.refresh()
     } catch (err) {
       console.error("[Login error]", err)

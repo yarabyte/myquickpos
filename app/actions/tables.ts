@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
-import { requireTenantId } from "@/lib/auth"
+import { requireTenantId, requireTabletManage } from "@/lib/auth"
 import { tableRepository } from "@/lib/repositories/table.repository"
 
 const createTableSchema = z.object({
@@ -17,6 +17,7 @@ export type ActionResult<T = unknown> = { success: true; data: T } | { success: 
 
 export async function createTable(formData: FormData): Promise<ActionResult> {
   try {
+    await requireTabletManage()
     const tenantId = await requireTenantId()
     const parsed = createTableSchema.safeParse(Object.fromEntries(formData))
     if (!parsed.success) {
@@ -36,6 +37,7 @@ export async function createTable(formData: FormData): Promise<ActionResult> {
 
 export async function updateTable(id: string, formData: FormData): Promise<ActionResult> {
   try {
+    await requireTabletManage()
     const tenantId = await requireTenantId()
     const parsed = updateTableSchema.safeParse(Object.fromEntries(formData))
     if (!parsed.success) {
@@ -52,6 +54,7 @@ export async function updateTable(id: string, formData: FormData): Promise<Actio
 
 export async function deleteTable(id: string): Promise<ActionResult> {
   try {
+    await requireTabletManage()
     const tenantId = await requireTenantId()
     await tableRepository.delete(id, tenantId)
     revalidatePath("/admin/tablet")

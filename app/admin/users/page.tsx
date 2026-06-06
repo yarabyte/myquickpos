@@ -1,16 +1,24 @@
 import { redirect } from "next/navigation"
-import { getTenantId } from "@/lib/auth"
+import { auth } from "@/auth"
+import { getTenantId, getSessionPermissions } from "@/lib/auth"
 import { userRepository } from "@/lib/repositories/user.repository"
 import { terminalRepository } from "@/lib/repositories/terminal.repository"
+import { tenantRepository } from "@/lib/repositories/tenant.repository"
 import { UsersPageClient } from "./users-page-client"
+import { parsePermissionsJson, hasPermission } from "@/lib/permissions"
 
 export default async function UsersPage() {
   const tenantId = await getTenantId()
   if (!tenantId) redirect("/login")
 
-  const [users, terminals] = await Promise.all([
+  const session = await auth()
+  const permissions = await getSessionPermissions()
+  const canManageUsers = hasPermission(permissions, "users.manage")
+
+  const [users, terminals, rolePermissions] = await Promise.all([
     userRepository.findAll(tenantId),
     terminalRepository.findAll(tenantId),
+    tenantRepository.getRolePermissions(tenantId),
   ])
 
   const userList = users.map((u) => ({
@@ -20,6 +28,7 @@ export default async function UsersPage() {
     role: u.role,
     status: u.status as "active" | "inactive",
     lastLogin: u.lastLogin?.toISOString() ?? "Never",
+    customPermissions: parsePermissionsJson(u.permissions),
   }))
 
   const terminalList = terminals.map((t) => ({ id: t.id, name: t.name }))
@@ -28,6 +37,9 @@ export default async function UsersPage() {
     <UsersPageClient
       initialUsers={userList}
       terminals={terminalList}
+      rolePermissions={rolePermissions}
+      canManageUsers={canManageUsers}
+      currentUserId={(session?.user as { id?: string } | undefined)?.id}
     />
   )
 }

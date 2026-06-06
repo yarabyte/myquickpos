@@ -16,14 +16,14 @@ export function PwaUpdateBanner({ onUpdate }: PwaUpdateBannerProps) {
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-card-foreground">
-            Update available
+            Mise à jour disponible
           </p>
           <p className="text-xs text-muted-foreground">
-            A new version of MyQuickPOS is ready
+            Une nouvelle version de MyQuickPOS est prête
           </p>
         </div>
         <Button size="sm" onClick={onUpdate}>
-          Update
+          Mettre à jour
         </Button>
       </div>
     </div>

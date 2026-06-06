@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Download, X } from "lucide-react"
 
@@ -9,12 +10,19 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>
 }
 
+function isTabletRoute(pathname: string) {
+  return pathname.startsWith("/restaurant") || pathname.startsWith("/admin/tablet")
+}
+
 export function PwaInstallPrompt() {
+  const pathname = usePathname()
   const [deferredPrompt, setDeferredPrompt] =
     useState<BeforeInstallPromptEvent | null>(null)
   const [dismissed, setDismissed] = useState(false)
 
   useEffect(() => {
+    if (isTabletRoute(pathname ?? "")) return
+
     const handler = (e: Event) => {
       e.preventDefault()
       setDeferredPrompt(e as BeforeInstallPromptEvent)
@@ -22,9 +30,9 @@ export function PwaInstallPrompt() {
 
     window.addEventListener("beforeinstallprompt", handler)
     return () => window.removeEventListener("beforeinstallprompt", handler)
-  }, [])
+  }, [pathname])
 
-  if (!deferredPrompt || dismissed) return null
+  if (isTabletRoute(pathname ?? "") || !deferredPrompt || dismissed) return null
 
   const handleInstall = async () => {
     await deferredPrompt.prompt()

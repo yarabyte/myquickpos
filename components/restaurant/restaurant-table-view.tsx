@@ -9,9 +9,10 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { formatWithCurrency } from "@/lib/format-currency"
 import { toTitleCase } from "@/lib/utils"
 import { toast } from "sonner"
-import { Send, UtensilsCrossed } from "lucide-react"
+import { Send } from "lucide-react"
 import { Minus, Plus, Trash2, ShoppingCart } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
+import { RestaurantTabletHeader } from "@/components/restaurant/restaurant-tablet-header"
 
 interface RestaurantTableViewProps {
   establishmentSlug: string
@@ -128,21 +129,12 @@ export function RestaurantTableView({
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-background">
-      {/* Header: establishment + table */}
-      <header className="flex shrink-0 items-center gap-3 border-b border-border bg-card px-4 py-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <UtensilsCrossed className="h-5 w-5" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate text-lg font-semibold text-card-foreground">
-            {establishment.name}
-          </h1>
-          <p className="truncate text-sm text-muted-foreground">Table {table.name}</p>
-        </div>
-      </header>
+      <RestaurantTabletHeader
+        establishmentName={establishment.name}
+        tableName={table.name}
+      />
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Left: categories + products */}
         <div className="flex flex-1 flex-col overflow-hidden">
           <div className="px-4 pt-3 pb-2">
             <CategoryBar

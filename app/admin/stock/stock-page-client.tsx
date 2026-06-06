@@ -33,6 +33,10 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog"
+import {
+  SearchableSelect,
+  type SearchableSelectGroup,
+} from "@/components/ui/searchable-select"
 
 const INVENTORY_PAGE_SIZE = 15
 const MOVEMENTS_PAGE_SIZE = 15
@@ -739,6 +743,30 @@ function getDescendantCategoryIds(
   return ids
 }
 
+function buildCategorySelectGroups(categoryTree: CategoryTreeNode[]): SearchableSelectGroup[] {
+  return categoryTree.map((root) => ({
+    label: toTitleCase(root.name),
+    options:
+      root.children.length === 0
+        ? [{ value: root.id, label: toTitleCase(root.name) }]
+        : root.children.map((ch) => ({
+            value: ch.id,
+            label: toTitleCase(ch.name),
+          })),
+  }))
+}
+
+function buildProductSelectOptions(
+  products: ProductRow[],
+  formatCurrency: (amount: number) => string
+) {
+  return products.map((p) => ({
+    value: p.id,
+    label: `${toTitleCase(p.name)} (${formatCurrency(p.price)})`,
+    keywords: `${p.name} ${toTitleCase(p.name)}`,
+  }))
+}
+
 function RestockModal({
   open,
   onClose,
@@ -772,6 +800,12 @@ function RestockModal({
     const allowedIds = new Set(getDescendantCategoryIds(categoryId, categories))
     return products.filter((p) => allowedIds.has(p.category))
   }, [products, categoryId, categories])
+
+  const categoryGroups = useMemo(() => buildCategorySelectGroups(categoryTree), [categoryTree])
+  const productOptions = useMemo(
+    () => buildProductSelectOptions(productsByCategory, formatCurrency),
+    [productsByCategory, formatCurrency]
+  )
 
   function addItem() {
     setItems([...items, { productId: "", quantity: 0 }])
@@ -829,51 +863,31 @@ function RestockModal({
               <Label htmlFor="restock-category" className="text-xs text-muted-foreground">
                 Category (optional)
               </Label>
-              <select
-                id="restock-category"
+              <SearchableSelect
                 value={categoryId}
-                onChange={(e) => {
-                  setCategoryId(e.target.value)
+                onValueChange={(v) => {
+                  setCategoryId(v)
                   setItems((prev) => prev.map((it) => ({ ...it, productId: "" })))
                 }}
-                className="w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm text-card-foreground"
-              >
-                <option value="">All categories</option>
-                {categoryTree.map((root) =>
-                  root.children.length === 0 ? (
-                    <option key={root.id} value={root.id}>
-                      {toTitleCase(root.name)}
-                    </option>
-                  ) : (
-                    <optgroup key={root.id} label={toTitleCase(root.name)}>
-                      {root.children.map((ch) => (
-                        <option key={ch.id} value={ch.id}>
-                          {toTitleCase(ch.name)}
-                        </option>
-                      ))}
-                    </optgroup>
-                  )
-                )}
-              </select>
+                options={[{ value: "", label: "All categories" }]}
+                groups={categoryGroups}
+                placeholder="All categories"
+                searchPlaceholder="Search category…"
+              />
             </div>
             <div className="space-y-2 max-h-64 overflow-y-auto rounded-lg border border-border bg-secondary/20 p-3">
               {items.map((item, idx) => (
                 <div key={idx} className="flex items-center gap-2">
-                  <select
+                  <SearchableSelect
                     value={item.productId}
-                    onChange={(e) => updateItem(idx, "productId", e.target.value)}
-                    className="flex-1 rounded-md border border-border bg-secondary px-3 py-2 text-sm text-card-foreground"
-                    required
-                  >
-                    <option value="">
-                      {categoryId ? "Select product..." : "Select category (optional) then product..."}
-                    </option>
-                    {productsByCategory.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {toTitleCase(p.name)} ({formatCurrency(p.price)})
-                      </option>
-                    ))}
-                  </select>
+                    onValueChange={(v) => updateItem(idx, "productId", v)}
+                    options={productOptions}
+                    placeholder={
+                      categoryId ? "Select product…" : "Select category (optional) then product…"
+                    }
+                    searchPlaceholder="Search product…"
+                    className="flex-1"
+                  />
                   <Input
                     type="number"
                     min="1"
@@ -959,6 +973,17 @@ function AdjustModal({
     return products.filter((p) => allowedIds.has(p.category))
   }, [products, categoryId, categories])
 
+  const categoryGroups = useMemo(() => buildCategorySelectGroups(categoryTree), [categoryTree])
+  const productOptions = useMemo(
+    () =>
+      productsByCategory.map((p) => ({
+        value: p.id,
+        label: toTitleCase(p.name),
+        keywords: `${p.name} ${toTitleCase(p.name)}`,
+      })),
+    [productsByCategory]
+  )
+
   const currentProduct = productsByCategory.find((p) => p.id === productId)
   const currentStock = currentProduct?.stock ?? 0
   const diff = newCount - currentStock
@@ -1008,53 +1033,32 @@ function AdjustModal({
           </div>
           <div className="space-y-2">
             <Label className="text-sm font-medium text-card-foreground">Category</Label>
-            <select
+            <SearchableSelect
               value={categoryId}
-              onChange={(e) => {
-                setCategoryId(e.target.value)
+              onValueChange={(v) => {
+                setCategoryId(v)
                 setProductId("")
                 setNewCount(0)
               }}
-              className="w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm text-card-foreground"
-            >
-              <option value="">All categories</option>
-              {categoryTree.map((root) =>
-                root.children.length === 0 ? (
-                  <option key={root.id} value={root.id}>
-                    {toTitleCase(root.name)}
-                  </option>
-                ) : (
-                  <optgroup key={root.id} label={toTitleCase(root.name)}>
-                    {root.children.map((ch) => (
-                      <option key={ch.id} value={ch.id}>
-                        {toTitleCase(ch.name)}
-                      </option>
-                    ))}
-                  </optgroup>
-                )
-              )}
-            </select>
+              options={[{ value: "", label: "All categories" }]}
+              groups={categoryGroups}
+              placeholder="All categories"
+              searchPlaceholder="Search category…"
+            />
           </div>
           <div className="space-y-2">
             <Label className="text-sm font-medium text-card-foreground">Product</Label>
-            <select
+            <SearchableSelect
               value={productId}
-              onChange={(e) => {
-                const val = e.target.value
-                setProductId(val)
-                const p = productsByCategory.find((x) => x.id === val)
+              onValueChange={(v) => {
+                setProductId(v)
+                const p = productsByCategory.find((x) => x.id === v)
                 setNewCount(p?.stock ?? 0)
               }}
-              className="w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm text-card-foreground"
-              required
-            >
-              <option value="">Select product...</option>
-              {productsByCategory.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {toTitleCase(p.name)}
-                </option>
-              ))}
-            </select>
+              options={productOptions}
+              placeholder="Select product…"
+              searchPlaceholder="Search product…"
+            />
           </div>
 
           {currentProduct && (
@@ -1152,6 +1156,17 @@ function TransferModal({
     return products.filter((p) => allowedIds.has(p.category))
   }, [products, categoryId, categories])
 
+  const categoryGroups = useMemo(() => buildCategorySelectGroups(categoryTree), [categoryTree])
+  const productOptions = useMemo(
+    () =>
+      productsByCategory.map((p) => ({
+        value: p.id,
+        label: toTitleCase(p.name),
+        keywords: `${p.name} ${toTitleCase(p.name)}`,
+      })),
+    [productsByCategory]
+  )
+
   function addItem() {
     setItems([...items, { productId: "", quantity: 0 }])
   }
@@ -1242,51 +1257,31 @@ function TransferModal({
               <Label htmlFor="transfer-category" className="text-xs text-muted-foreground">
                 Category (optional)
               </Label>
-              <select
-                id="transfer-category"
+              <SearchableSelect
                 value={categoryId}
-                onChange={(e) => {
-                  setCategoryId(e.target.value)
+                onValueChange={(v) => {
+                  setCategoryId(v)
                   setItems((prev) => prev.map((it) => ({ ...it, productId: "" })))
                 }}
-                className="w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm text-card-foreground"
-              >
-                <option value="">All categories</option>
-                {categoryTree.map((root) =>
-                  root.children.length === 0 ? (
-                    <option key={root.id} value={root.id}>
-                      {toTitleCase(root.name)}
-                    </option>
-                  ) : (
-                    <optgroup key={root.id} label={toTitleCase(root.name)}>
-                      {root.children.map((ch) => (
-                        <option key={ch.id} value={ch.id}>
-                          {toTitleCase(ch.name)}
-                        </option>
-                      ))}
-                    </optgroup>
-                  )
-                )}
-              </select>
+                options={[{ value: "", label: "All categories" }]}
+                groups={categoryGroups}
+                placeholder="All categories"
+                searchPlaceholder="Search category…"
+              />
             </div>
             <div className="space-y-2 max-h-64 overflow-y-auto rounded-lg border border-border bg-secondary/20 p-3">
               {items.map((item, idx) => (
                 <div key={idx} className="flex items-center gap-2">
-                  <select
+                  <SearchableSelect
                     value={item.productId}
-                    onChange={(e) => updateItem(idx, "productId", e.target.value)}
-                    className="flex-1 rounded-md border border-border bg-secondary px-3 py-2 text-sm text-card-foreground"
-                    required
-                  >
-                    <option value="">
-                      {categoryId ? "Select product..." : "Select category (optional) then product..."}
-                    </option>
-                    {productsByCategory.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {toTitleCase(p.name)}
-                      </option>
-                    ))}
-                  </select>
+                    onValueChange={(v) => updateItem(idx, "productId", v)}
+                    options={productOptions}
+                    placeholder={
+                      categoryId ? "Select product…" : "Select category (optional) then product…"
+                    }
+                    searchPlaceholder="Search product…"
+                    className="flex-1"
+                  />
                   <Input
                     type="number"
                     min="1"

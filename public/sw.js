@@ -1,8 +1,9 @@
-const CACHE_NAME = "myquickpos-v2";
+const CACHE_NAME = "myquickpos-v3";
 
 const PRECACHE_URLS = [
   "/login",
   "/admin",
+  "/admin/tablet",
   "/icons/icon-192x192.jpg",
   "/icons/icon-512x512.jpg",
 ];
@@ -30,6 +31,12 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
+
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
 
@@ -50,7 +57,10 @@ self.addEventListener("fetch", (event) => {
             return cachedResponse;
           }
           if (event.request.mode === "navigate") {
-            return caches.match("/login");
+            return caches.match("/admin/tablet").then((tabletPage) => {
+              if (tabletPage) return tabletPage;
+              return caches.match("/login");
+            });
           }
           return new Response("Offline", {
             status: 503,

@@ -14,10 +14,12 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { formatWithCurrency } from "@/lib/format-currency"
 import { toTitleCase, cn } from "@/lib/utils"
 import { toast } from "sonner"
-import { Send, UtensilsCrossed, ShoppingCart, X } from "lucide-react"
+import { Send, ShoppingCart, X } from "lucide-react"
 import { Minus, Plus, Trash2 } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useOfflineOrderSync } from "@/hooks/use-offline-order-sync"
+import { RestaurantTabletHeader } from "@/components/restaurant/restaurant-tablet-header"
 
 interface RestaurantEstablishmentViewProps {
   establishmentSlug: string
@@ -52,6 +54,7 @@ export function RestaurantEstablishmentView({
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0)
   const [editingOrder, setEditingOrder] = useState<EstablishmentOrderSummary | null>(null)
   const [confirmSendOpen, setConfirmSendOpen] = useState(false)
+  const { pendingCount, queueOrder } = useOfflineOrderSync(establishmentSlug)
 
   const productMap = useMemo(
     () => new Map(allProducts.map((p) => [p.id, p])),
@@ -166,6 +169,15 @@ export function RestaurantEstablishmentView({
 
     setSending(true)
 
+    if (!navigator.onLine) {
+      await queueOrder(payload)
+      setSending(false)
+      setCart([])
+      setOrderLabel("")
+      setEditingOrder(null)
+      return
+    }
+
     if (editingOrder) {
       const result = await updatePendingEstablishmentOrder({
         ...payload,
@@ -196,9 +208,9 @@ export function RestaurantEstablishmentView({
         description: `Commande ${result.data.orderNumber} en attente.`,
       })
     } else {
-      toast.error(result.error)
+      await queueOrder(payload)
     }
-  }, [cart, establishmentSlug, subtotal, tax, orderLabel, editingOrder])
+  }, [cart, establishmentSlug, subtotal, tax, orderLabel, editingOrder, queueOrder])
 
   const handleSendClick = useCallback(() => {
     if (cart.length === 0) {
@@ -223,19 +235,19 @@ export function RestaurantEstablishmentView({
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-background">
-      <header className="flex shrink-0 items-center gap-3 border-b border-border bg-card px-4 py-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <UtensilsCrossed className="h-5 w-5" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate text-lg font-semibold text-card-foreground">
-            {toTitleCase(establishment.name)}
-          </h1>
-          <p className="truncate text-sm text-muted-foreground">
+      <RestaurantTabletHeader
+        establishmentName={establishment.name}
+        subtitle={
+          <>
             Indiquez le nom de la table ou du client avant d&apos;envoyer.
-          </p>
-        </div>
-      </header>
+            {pendingCount > 0 && (
+              <span className="ml-2 text-amber-500">
+                · {pendingCount} commande{pendingCount > 1 ? "s" : ""} en attente
+              </span>
+            )}
+          </>
+        }
+      />
 
       <div className="flex flex-1 overflow-hidden">
         <div className="flex flex-1 flex-col overflow-hidden">

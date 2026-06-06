@@ -76,6 +76,7 @@ model User {
   tenantId  String
   tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   status    String   @default("active") // active, inactive
+  permissions Json?  // custom permission keys; null = role defaults
   createdAt DateTime @default(now())
   lastLogin DateTime?
 
@@ -297,6 +298,7 @@ enum Role {
   ADMIN
   MANAGER
   CASHIER
+  SERVER
 }
 
 enum OrderStatus {

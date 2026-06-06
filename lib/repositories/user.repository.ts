@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/db"
 import type { Role } from "@prisma/client"
+import type { PermissionKey } from "@/lib/permissions"
 
 export interface CreateUserDto {
   email: string
@@ -9,6 +10,7 @@ export interface CreateUserDto {
   role: Role
   assignedTerminals?: string[]
   status?: string
+  permissions?: PermissionKey[] | null
 }
 
 export interface UpdateUserDto {
@@ -18,6 +20,7 @@ export interface UpdateUserDto {
   role?: Role
   assignedTerminals?: string[]
   status?: string
+  permissions?: PermissionKey[] | null
 }
 
 export const userRepository = {
@@ -59,6 +62,9 @@ export const userRepository = {
         role: data.role,
         tenantId,
         status: data.status ?? "active",
+        ...(data.permissions !== undefined && {
+          permissions: data.permissions,
+        }),
       },
     })
   },
@@ -72,6 +78,9 @@ export const userRepository = {
     }
     if (data.password) {
       updateData.password = await bcrypt.hash(data.password, 10)
+    }
+    if (data.permissions !== undefined) {
+      updateData.permissions = data.permissions
     }
     return prisma.user.update({
       where: { id },

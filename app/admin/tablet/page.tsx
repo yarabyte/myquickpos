@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation"
-import { getTenantId } from "@/lib/auth"
+import { auth } from "@/auth"
+import { getTenantId, getSessionPermissions } from "@/lib/auth"
+import { hasPermission } from "@/lib/permissions"
 import { establishmentRepository } from "@/lib/repositories/establishment.repository"
 import { terminalRepository } from "@/lib/repositories/terminal.repository"
 import { TabletPageClient } from "./tablet-page-client"
@@ -7,6 +9,15 @@ import { TabletPageClient } from "./tablet-page-client"
 export default async function TabletPage() {
   const tenantId = await getTenantId()
   if (!tenantId) redirect("/login")
+
+  const session = await auth()
+  const permissions = await getSessionPermissions()
+  const role = (session?.user as { role?: string } | undefined)?.role
+  const canManageTablet =
+    hasPermission(permissions, "tablet.manage") ||
+    (role !== "SERVER" &&
+      role !== "CASHIER" &&
+      hasPermission(permissions, "admin.tablet"))
 
   const [establishments, terminals] = await Promise.all([
     establishmentRepository.findAll(tenantId),
@@ -32,6 +43,7 @@ export default async function TabletPage() {
     <TabletPageClient
       establishments={establishmentList}
       terminals={terminalList}
+      canManageTablet={canManageTablet}
     />
   )
 }

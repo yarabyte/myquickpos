@@ -1,14 +1,12 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { getTenantId, requireRole } from "@/lib/auth"
+import { getTenantId, requirePermission } from "@/lib/auth"
 import { tenantRepository } from "@/lib/repositories/tenant.repository"
-
-const ADMIN_ROLES = ["SUPER_ADMIN", "ADMIN", "MANAGER"]
 
 export async function updateTenantSettings(formData: FormData) {
   try {
-    await requireRole(ADMIN_ROLES)
+    await requirePermission("settings.manage")
   } catch {
     return { ok: false, error: "Forbidden: Insufficient permissions" }
   }

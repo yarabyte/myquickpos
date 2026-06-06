@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState, useCallback, useEffect } from "react"
+import { useMemo, useState, useCallback, useEffect, useRef } from "react"
 import {
   AreaChart,
   Area,
@@ -26,14 +26,14 @@ import {
 } from "lucide-react"
 import { cn, toTitleCase } from "@/lib/utils"
 import { formatWithCurrency } from "@/lib/format-currency"
-
-type Period = "today" | "week" | "month"
-
-const periods: { value: Period; label: string }[] = [
-  { value: "today", label: "Today" },
-  { value: "week", label: "This Week" },
-  { value: "month", label: "By Month" },
-]
+import {
+  AnalyticsPeriodPicker,
+  analyticsRangeToParams,
+} from "@/components/admin/analytics-period-picker"
+import {
+  getPresetRange,
+  type AnalyticsDateRange,
+} from "@/lib/analytics-date-range"
 
 function ChartTooltip({
   active,
@@ -97,7 +97,6 @@ function StatCard({
   )
 }
 
-const CHART_FILLS = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"]
 const CHART_FILLS_FALLBACK = ["#22c55e", "#3b82f6", "#f59e0b", "#8b5cf6", "#ec4899"]
 
 export interface ServerData {
@@ -112,6 +111,43 @@ export interface ServerData {
   activeTerminalCount: number
 }
 
+type AnalyticsBundle = {
+  revenueChart: {
+    granularity: "hour" | "day" | "month"
+    data: Record<string, string | number>[]
+    xKey: "hour" | "label" | "month"
+  }
+  revenueByCategory: ServerData["revenueByCategory"]
+  revenueByPaymentMethod: ServerData["revenueByPaymentMethod"]
+  topProducts: ServerData["topProducts"]
+  conversionByTerminal: ServerData["conversionByTerminal"]
+  summary: ServerData["summary"]
+}
+
+function serverDataToBundle(serverData: ServerData): AnalyticsBundle {
+  const dayChart = serverData.revenueByDay.map((row) => ({
+    label: new Date(`${row.day}T12:00:00`).toLocaleDateString("fr-FR", {
+      day: "numeric",
+      month: "short",
+    }),
+    revenue: row.revenue,
+    orders: row.orders,
+    avgTicket: row.avgTicket,
+  }))
+  return {
+    revenueChart: {
+      granularity: "day",
+      data: dayChart,
+      xKey: "label",
+    },
+    revenueByCategory: serverData.revenueByCategory,
+    revenueByPaymentMethod: serverData.revenueByPaymentMethod,
+    topProducts: serverData.topProducts,
+    conversionByTerminal: serverData.conversionByTerminal,
+    summary: serverData.summary,
+  }
+}
+
 export function AnalyticsPageClient({
   currency = "USD",
   serverData,
@@ -119,125 +155,87 @@ export function AnalyticsPageClient({
   currency?: string
   serverData: ServerData
 }) {
-  const [period, setPeriod] = useState<Period>("month")
-  const currentYear = new Date().getFullYear()
-  const [selectedYear, setSelectedYear] = useState(currentYear)
-  const [monthlyData, setMonthlyData] = useState<{ month: string; revenue: number; orders: number; avgTicket: number }[]>([])
-  const [monthlyLoading, setMonthlyLoading] = useState(false)
+  const [dateRange, setDateRange] = useState<AnalyticsDateRange>(() => getPresetRange("last30"))
+  const [analytics, setAnalytics] = useState<AnalyticsBundle>(() => serverDataToBundle(serverData))
+  const [loading, setLoading] = useState(false)
+  const skipInitialFetch = useRef(true)
   const formatCurrency = useCallback((amount: number) => formatWithCurrency(amount, currency), [currency])
 
-  const weeklyFromServer = useMemo(() => {
-    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-    const byDay = new Map(serverData.revenueByDay.map((r) => [r.day, r]))
-    const result: { day: string; revenue: number; orders: number; avgTicket: number }[] = []
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date()
-      d.setDate(d.getDate() - i)
-      const iso = d.toISOString().slice(0, 10)
-      const row = byDay.get(iso)
-      const dayLabel = dayNames[d.getDay()]
-      result.push({
-        day: dayLabel,
-        revenue: row?.revenue ?? 0,
-        orders: row?.orders ?? 0,
-        avgTicket: row?.avgTicket ?? 0,
-      })
-    }
-    return result
-  }, [serverData.revenueByDay])
-
   useEffect(() => {
-    if (period !== "month") return
-    setMonthlyLoading(true)
-    fetch(`/admin/analytics/revenue-by-month?year=${selectedYear}`)
-      .then((res) => (res.ok ? res.json() : []))
-      .then((data) => setMonthlyData(Array.isArray(data) ? data : []))
-      .catch(() => setMonthlyData([]))
-      .finally(() => setMonthlyLoading(false))
-  }, [period, selectedYear])
+    if (skipInitialFetch.current) {
+      skipInitialFetch.current = false
+      return
+    }
+    const { from, to } = analyticsRangeToParams(dateRange)
+    setLoading(true)
+    fetch(`/admin/analytics/data?from=${from}&to=${to}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.revenueChart) setAnalytics(data)
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [dateRange])
 
-  const chartData =
-    period === "today"
-      ? serverData.revenueByHour
-      : period === "week"
-        ? weeklyFromServer
-        : period === "month"
-          ? monthlyData
-          : serverData.revenueByDay
-  const revenueXKey = period === "today" ? "hour" : period === "month" ? "month" : "day"
-  const categorySales = serverData.revenueByCategory
-  const payments = serverData.revenueByPaymentMethod
+  const chartData = analytics.revenueChart.data
+  const revenueXKey = analytics.revenueChart.xKey
+  const categorySales = analytics.revenueByCategory
+  const payments = analytics.revenueByPaymentMethod
 
-  const totalRevenue = serverData.summary.revenue
-  const totalOrders = serverData.summary.totalOrders
-  const avgTicket = serverData.summary.avgBasket
+  const totalRevenue = analytics.summary.revenue
+  const totalOrders = analytics.summary.totalOrders
+  const avgTicket = analytics.summary.avgBasket
   const onlineTerminals = serverData.activeTerminalCount
   const terminalCount = serverData.terminalCount
+  const periodSub = dateRange.label
+
+  const chartTitle = useMemo(() => {
+    switch (analytics.revenueChart.granularity) {
+      case "hour":
+        return "Revenus par heure"
+      case "month":
+        return "Revenus par mois"
+      default:
+        return "Revenus par jour"
+    }
+  }, [analytics.revenueChart.granularity])
 
   return (
     <div className="p-6 lg:p-8 space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Analytics</h1>
-          <p className="text-sm text-muted-foreground mt-1">Sales performance and business insights</p>
+          <p className="text-sm text-muted-foreground mt-1">Performance des ventes et indicateurs clés</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center rounded-lg border border-border bg-card p-1 gap-1">
-            {periods.map((p) => (
-              <button
-                key={p.value}
-                onClick={() => setPeriod(p.value)}
-                className={cn(
-                  "rounded-md px-3 py-1.5 text-xs font-medium transition-all",
-                  period === p.value ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-card-foreground"
-                )}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-          {period === "month" && (
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
-              className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-card-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              {Array.from({ length: 6 }, (_, i) => currentYear - i).map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
+        <AnalyticsPeriodPicker value={dateRange} onChange={setDateRange} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label="Total Revenue"
+          label="Chiffre d'affaires"
           value={formatCurrency(totalRevenue)}
-          sub="Last 30 days"
+          sub={periodSub}
           change={0}
           icon={DollarSign}
         />
         <StatCard
-          label="Total Orders"
+          label="Commandes"
           value={totalOrders.toString()}
-          sub="Last 30 days"
+          sub={periodSub}
           change={0}
           icon={ShoppingCart}
         />
         <StatCard
-          label="Avg. Ticket"
+          label="Panier moyen"
           value={formatCurrency(avgTicket)}
-          sub="Per transaction"
+          sub="Par transaction"
           change={0}
           icon={TrendingUp}
         />
         <StatCard
-          label="Active Terminals"
+          label="Terminaux actifs"
           value={`${onlineTerminals}/${terminalCount}`}
-          sub={`${terminalCount - onlineTerminals} offline`}
+          sub={`${terminalCount - onlineTerminals} hors ligne`}
           change={0}
           icon={Monitor}
         />
@@ -246,14 +244,12 @@ export function AnalyticsPageClient({
       <div className="grid grid-cols-1 gap-6">
         <div className="rounded-xl border border-border bg-card p-6">
           <h2 className="text-base font-semibold text-card-foreground mb-6">
-            Revenue
-            {period === "month" && (
-              <span className="ml-2 text-sm font-normal text-muted-foreground">by month · {selectedYear}</span>
-            )}
+            {chartTitle}
+            <span className="ml-2 text-sm font-normal text-muted-foreground">· {periodSub}</span>
           </h2>
-          {period === "month" && monthlyLoading ? (
+          {loading ? (
             <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
-              Loading…
+              Chargement…
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={300}>
@@ -277,8 +273,8 @@ export function AnalyticsPageClient({
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="rounded-xl border border-border bg-card p-6">
-          <h2 className="text-base font-semibold text-card-foreground mb-1">Sales by Category</h2>
-          <p className="text-xs text-muted-foreground mb-6">Revenue per category</p>
+          <h2 className="text-base font-semibold text-card-foreground mb-1">Ventes par catégorie</h2>
+          <p className="text-xs text-muted-foreground mb-6">Revenus par catégorie · {periodSub}</p>
           <div className="flex flex-col sm:flex-row items-center gap-6">
             <div className="w-full sm:w-[55%] min-h-[260px] h-[260px]">
               <ResponsiveContainer width="100%" height={260}>
@@ -316,7 +312,7 @@ export function AnalyticsPageClient({
                             {formatCurrency(p.revenue)}
                           </p>
                           <p className="text-xs text-muted-foreground mt-1">
-                            {(percent).toFixed(1)}% of total
+                            {(percent).toFixed(1)}% du total
                           </p>
                         </div>
                       )
@@ -351,8 +347,8 @@ export function AnalyticsPageClient({
           </div>
         </div>
         <div className="rounded-xl border border-border bg-card p-6">
-          <h2 className="text-base font-semibold text-card-foreground mb-1">Payment Methods</h2>
-          <p className="text-xs text-muted-foreground mb-6">Revenue by payment type</p>
+          <h2 className="text-base font-semibold text-card-foreground mb-1">Modes de paiement</h2>
+          <p className="text-xs text-muted-foreground mb-6">Revenus par type · {periodSub}</p>
           <ResponsiveContainer width="100%" height={280}>
             <BarChart
               data={payments}
@@ -450,16 +446,16 @@ export function AnalyticsPageClient({
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="rounded-xl border border-border bg-card p-6">
-          <h2 className="text-base font-semibold text-card-foreground mb-4">Top Products</h2>
+          <h2 className="text-base font-semibold text-card-foreground mb-4">Produits les plus vendus</h2>
           <div className="space-y-3">
-            {serverData.topProducts.slice(0, 5).map((p, i) => (
+            {analytics.topProducts.slice(0, 5).map((p, i) => (
               <div key={p.product.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
                 <div className="flex items-center gap-3">
                   <span className="text-muted-foreground font-mono w-6">{i + 1}</span>
                   <span className="font-medium text-card-foreground">{toTitleCase(p.product.name)}</span>
                 </div>
                 <div className="flex items-center gap-4">
-                  <span className="text-sm text-muted-foreground">{p.unitsSold} sold</span>
+                  <span className="text-sm text-muted-foreground">{p.unitsSold} vendus</span>
                   <span className="font-mono font-semibold text-card-foreground">{formatCurrency(p.revenue)}</span>
                 </div>
               </div>
@@ -467,9 +463,9 @@ export function AnalyticsPageClient({
           </div>
         </div>
         <div className="rounded-xl border border-border bg-card p-6">
-          <h2 className="text-base font-semibold text-card-foreground mb-4">Terminal Performance</h2>
+          <h2 className="text-base font-semibold text-card-foreground mb-4">Performance par terminal</h2>
           <div className="space-y-3">
-            {serverData.conversionByTerminal.map((t) => (
+            {analytics.conversionByTerminal.map((t) => (
               <div key={t.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
                 <div>
                   <p className="font-medium text-card-foreground">{toTitleCase(t.name)}</p>
@@ -477,7 +473,7 @@ export function AnalyticsPageClient({
                 </div>
                 <div className="text-right">
                   <p className="font-mono font-semibold text-card-foreground">{formatCurrency(t.revenue)}</p>
-                  <p className="text-xs text-muted-foreground">{t.orders} orders</p>
+                  <p className="text-xs text-muted-foreground">{t.orders} commandes</p>
                 </div>
               </div>
             ))}

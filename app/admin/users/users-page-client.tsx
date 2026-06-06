@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useCallback, useEffect } from "react"
+import { useState, useMemo, useCallback, useEffect, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import {
   Search,
@@ -13,6 +13,8 @@ import {
   Mail,
   UserCheck,
   UserX,
+  UtensilsCrossed,
+  Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -23,9 +25,18 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { CreateUserModal } from "@/components/admin/create-user-modal"
+import { RolePermissionsPanel } from "@/components/admin/role-permissions-panel"
+import { countPermissionsLabel } from "@/components/admin/permissions-editor"
 import { createUser, updateUser, deleteUser as deleteUserAction } from "@/app/actions/users"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { cn } from "@/lib/utils"
+import {
+  resolveUserPermissions,
+  ROLE_LABELS,
+  isStaffRole,
+  type PermissionKey,
+  type RolePermissionsMap,
+} from "@/lib/permissions"
 import type { Role } from "@prisma/client"
 
 export interface UserInfo {
@@ -35,18 +46,29 @@ export interface UserInfo {
   role: Role
   status: "active" | "inactive"
   lastLogin: string
+  customPermissions: PermissionKey[] | null
 }
 
 interface UsersPageClientProps {
   initialUsers: UserInfo[]
   terminals: { id: string; name: string }[]
+  rolePermissions: RolePermissionsMap | null
+  canManageUsers: boolean
+  currentUserId?: string
 }
 
-export function UsersPageClient({ initialUsers, terminals }: UsersPageClientProps) {
+export function UsersPageClient({
+  initialUsers,
+  terminals,
+  rolePermissions,
+  canManageUsers,
+  currentUserId,
+}: UsersPageClientProps) {
   const router = useRouter()
+  const [isRefreshing, startRefresh] = useTransition()
   const [users, setUsers] = useState(initialUsers)
   const [search, setSearch] = useState("")
-  const [filter, setFilter] = useState<"all" | "MANAGER" | "CASHIER">("all")
+  const [filter, setFilter] = useState<"all" | "MANAGER" | "SERVER" | "CASHIER">("all")
   const [modalOpen, setModalOpen] = useState(false)
   const [editUser, setEditUser] = useState<UserInfo | null>(null)
   const [deleteUserTarget, setDeleteUserTarget] = useState<UserInfo | null>(null)
@@ -55,29 +77,41 @@ export function UsersPageClient({ initialUsers, terminals }: UsersPageClientProp
     setUsers(initialUsers)
   }, [initialUsers])
 
+  const reloadPage = useCallback(() => {
+    startRefresh(() => {
+      router.refresh()
+    })
+  }, [router])
+
   const filtered = useMemo(() => {
     return users.filter((u) => {
       const matchesSearch =
         u.name.toLowerCase().includes(search.toLowerCase()) ||
         u.email.toLowerCase().includes(search.toLowerCase())
-      const matchesFilter = filter === "all" ? true : u.role === filter
+      const matchesFilter =
+        filter === "all"
+          ? true
+          : filter === "MANAGER"
+            ? isStaffRole(u.role)
+            : u.role === filter
       return matchesSearch && matchesFilter
     })
   }, [users, search, filter])
 
-  const managerCount = users.filter((u) => u.role === "MANAGER" || u.role === "ADMIN" || u.role === "SUPER_ADMIN").length
+  const managerCount = users.filter((u) => isStaffRole(u.role)).length
+  const serverCount = users.filter((u) => u.role === "SERVER").length
   const cashierCount = users.filter((u) => u.role === "CASHIER").length
 
   const handleDelete = useCallback(
     async (id: string) => {
       const r = await deleteUserAction(id)
       if (r.success) {
-        router.refresh()
+        reloadPage()
         setUsers((prev) => prev.filter((u) => u.id !== id))
         setDeleteUserTarget(null)
       }
     },
-    [router]
+    [reloadPage]
   )
 
   const handleToggleStatus = useCallback(
@@ -89,7 +123,7 @@ export function UsersPageClient({ initialUsers, terminals }: UsersPageClientProp
       fd.set("status", user.status === "active" ? "inactive" : "active")
       const r = await updateUser(user.id, fd)
       if (r.success) {
-        router.refresh()
+        reloadPage()
         setUsers((prev) =>
           prev.map((u) =>
             u.id === user.id
@@ -99,7 +133,7 @@ export function UsersPageClient({ initialUsers, terminals }: UsersPageClientProp
         )
       }
     },
-    [router]
+    [reloadPage]
   )
 
   function formatDate(dateStr: string) {
@@ -116,33 +150,60 @@ export function UsersPageClient({ initialUsers, terminals }: UsersPageClientProp
   }
 
   function roleLabel(role: Role) {
-    if (role === "SUPER_ADMIN" || role === "ADMIN" || role === "MANAGER") return "Manager"
-    return "Cashier"
+    return ROLE_LABELS[role] ?? role
   }
 
-  const tabs: { key: "all" | "MANAGER" | "CASHIER"; label: string; count: number }[] = [
-    { key: "all", label: "All Users", count: users.length },
+  function permissionsLabel(user: UserInfo) {
+    const isCustom = user.customPermissions != null
+    const effective = resolveUserPermissions({
+      role: user.role,
+      customPermissions: user.customPermissions,
+      tenantRolePermissions: rolePermissions,
+    })
+    const base = countPermissionsLabel(isCustom ? user.customPermissions : effective, isCustom)
+    return isCustom ? `${base} (personnalisé)` : base
+  }
+
+  const tabs: { key: "all" | "MANAGER" | "SERVER" | "CASHIER"; label: string; count: number }[] = [
+    { key: "all", label: "Tous", count: users.length },
     { key: "MANAGER", label: "Managers", count: managerCount },
-    { key: "CASHIER", label: "POS Cashiers", count: cashierCount },
+    { key: "SERVER", label: "Serveurs", count: serverCount },
+    { key: "CASHIER", label: "Caissiers", count: cashierCount },
   ]
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="relative flex flex-col gap-6 p-6">
+      {isRefreshing && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/70 backdrop-blur-[1px]">
+          <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground shadow-sm">
+            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+            Chargement…
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Users</h1>
+          <h1 className="text-2xl font-bold text-foreground">Utilisateurs</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Manage managers and POS cashiers
+            Gérez les comptes et les droits d&apos;accès
           </p>
         </div>
+        {canManageUsers && (
         <Button
           onClick={() => setModalOpen(true)}
           className="bg-primary text-primary-foreground hover:bg-primary/90"
         >
           <Plus className="h-4 w-4" />
-          Add User
+          Ajouter
         </Button>
+        )}
       </div>
+
+      <RolePermissionsPanel
+        initialRolePermissions={rolePermissions}
+        canManage={canManageUsers}
+        onSaved={reloadPage}
+      />
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex gap-1 rounded-lg bg-secondary p-1">
@@ -181,6 +242,7 @@ export function UsersPageClient({ initialUsers, terminals }: UsersPageClientProp
               <tr className="border-b border-border bg-secondary/50">
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">User</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Role</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden md:table-cell">Droits</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">Status</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">Last Login</th>
                 <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
@@ -197,9 +259,11 @@ export function UsersPageClient({ initialUsers, terminals }: UsersPageClientProp
                       <div
                         className={cn(
                           "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold",
-                          user.role === "MANAGER" || user.role === "ADMIN" || user.role === "SUPER_ADMIN"
+                          isStaffRole(user.role)
                             ? "bg-primary/15 text-primary"
-                            : "bg-secondary text-secondary-foreground"
+                            : user.role === "SERVER"
+                              ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                              : "bg-secondary text-secondary-foreground"
                         )}
                       >
                         {user.name
@@ -223,17 +287,27 @@ export function UsersPageClient({ initialUsers, terminals }: UsersPageClientProp
                     <span
                       className={cn(
                         "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium",
-                        user.role === "MANAGER" || user.role === "ADMIN" || user.role === "SUPER_ADMIN"
+                        isStaffRole(user.role)
                           ? "bg-primary/10 text-primary"
-                          : "bg-secondary text-secondary-foreground"
+                          : user.role === "SERVER"
+                            ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                            : "bg-secondary text-secondary-foreground"
                       )}
                     >
-                      {user.role === "MANAGER" || user.role === "ADMIN" || user.role === "SUPER_ADMIN" ? (
+                      {isStaffRole(user.role) ? (
                         <Shield className="h-3 w-3" />
+                      ) : user.role === "SERVER" ? (
+                        <UtensilsCrossed className="h-3 w-3" />
                       ) : (
                         <Monitor className="h-3 w-3" />
                       )}
                       {roleLabel(user.role)}
+                    </span>
+                  </td>
+
+                  <td className="px-4 py-3 hidden md:table-cell">
+                    <span className="text-xs text-muted-foreground">
+                      {permissionsLabel(user)}
                     </span>
                   </td>
 
@@ -272,10 +346,13 @@ export function UsersPageClient({ initialUsers, terminals }: UsersPageClientProp
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="bg-card border-border">
+                        {canManageUsers && (
                         <DropdownMenuItem onClick={() => setEditUser(user)} className="text-card-foreground">
                           <Pencil className="h-4 w-4" />
-                          Edit User
+                          Modifier
                         </DropdownMenuItem>
+                        )}
+                        {canManageUsers && (
                         <DropdownMenuItem
                           onClick={() => handleToggleStatus(user)}
                           className="text-card-foreground"
@@ -292,14 +369,19 @@ export function UsersPageClient({ initialUsers, terminals }: UsersPageClientProp
                             </>
                           )}
                         </DropdownMenuItem>
+                        )}
+                        {canManageUsers && user.id !== currentUserId && (
+                        <>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           onClick={() => setDeleteUserTarget(user)}
                           className="text-destructive focus:text-destructive"
                         >
                           <Trash2 className="h-4 w-4 mr-2" />
-                          Delete User
+                          Supprimer
                         </DropdownMenuItem>
+                        </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </td>
@@ -308,7 +390,7 @@ export function UsersPageClient({ initialUsers, terminals }: UsersPageClientProp
 
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-12 text-center">
+                  <td colSpan={6} className="px-4 py-12 text-center">
                     <p className="text-sm text-muted-foreground">No users found</p>
                     <p className="text-xs text-muted-foreground mt-1">
                       Try a different search or filter
@@ -329,12 +411,13 @@ export function UsersPageClient({ initialUsers, terminals }: UsersPageClientProp
         }}
         editUser={editUser}
         terminals={terminals}
+        rolePermissions={rolePermissions}
         onCreateUser={createUser}
         onUpdateUser={updateUser}
         onSuccess={() => {
-          router.refresh()
           setModalOpen(false)
           setEditUser(null)
+          reloadPage()
         }}
       />
 

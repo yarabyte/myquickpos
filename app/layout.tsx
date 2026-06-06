@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from 'next/font/google'
 import { SessionProvider } from 'next-auth/react'
 import { ThemeProvider } from '@/components/theme-provider'
 import { PwaProvider } from '@/components/pwa/pwa-provider'
+import { TabletPwaProvider } from '@/components/pwa/tablet-pwa-provider'
 import { AuthProvider } from '@/lib/auth-context'
 import { Toaster } from '@/components/ui/sonner'
 import { RadixPortalCleanup } from '@/components/radix-portal-cleanup'
@@ -56,9 +57,11 @@ export default function RootLayout({
           <SessionProvider>
             <AuthProvider>
               <PwaProvider>
-                <RadixPortalCleanup />
-                {children}
-                <Toaster position="bottom-right" richColors />
+                <TabletPwaProvider>
+                  <RadixPortalCleanup />
+                  {children}
+                  <Toaster position="bottom-right" richColors />
+                </TabletPwaProvider>
               </PwaProvider>
             </AuthProvider>
           </SessionProvider>

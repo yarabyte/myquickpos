@@ -3,6 +3,12 @@ import Credentials from "next-auth/providers/credentials"
 import { z } from "zod"
 import { tenantRepository } from "@/lib/repositories/tenant.repository"
 import { userRepository } from "@/lib/repositories/user.repository"
+import {
+  parsePermissionsJson,
+  resolveUserPermissions,
+  type RolePermissionsMap,
+} from "@/lib/permissions"
+import type { Role } from "@prisma/client"
 
 const signInSchema = z.object({
   email: z.string().email("Invalid email"),
@@ -44,6 +50,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             return null
           }
 
+          const tenantSettings = (tenant.settings ?? {}) as { rolePermissions?: RolePermissionsMap }
+          const customPermissions = parsePermissionsJson(user.permissions)
+          const permissions = resolveUserPermissions({
+            role: user.role as Role,
+            customPermissions,
+            tenantRolePermissions: tenantSettings.rolePermissions ?? null,
+          })
+
           return {
             id: user.id,
             email: user.email,
@@ -52,6 +66,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             tenantId: tenant.id,
             tenantSlug: tenant.slug,
             rememberMe: rememberMe === "true",
+            permissions,
           }
         } catch (err) {
           console.error("[Auth] authorize error:", err)
@@ -67,6 +82,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.tenantId = (user as { tenantId?: string }).tenantId
         token.tenantSlug = (user as { tenantSlug?: string }).tenantSlug
         token.role = (user as { role?: string }).role
+        token.permissions = (user as { permissions?: string[] }).permissions ?? []
         const rememberMe = (user as { rememberMe?: boolean }).rememberMe
         const maxAge = rememberMe ? 30 * 24 * 60 * 60 : 24 * 60 * 60
         token.exp = Math.floor(Date.now() / 1000) + maxAge
@@ -79,6 +95,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         (session.user as { tenantId?: string }).tenantId = token.tenantId as string
         (session.user as { tenantSlug?: string }).tenantSlug = token.tenantSlug as string
         (session.user as { role?: string }).role = token.role as string
+        ;(session.user as { permissions?: string[] }).permissions =
+          (token.permissions as string[]) ?? []
       }
       return session
     },

@@ -8,7 +8,7 @@ import {
   deleteEstablishment,
 } from "@/app/actions/establishments"
 import { createTable, updateTable, deleteTable } from "@/app/actions/tables"
-import { Tablet, Plus, Pencil, Trash2, Copy, LayoutGrid } from "lucide-react"
+import { Tablet, Plus, Pencil, Trash2, ExternalLink, LayoutGrid } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -46,9 +46,11 @@ interface TerminalOption {
 export function TabletPageClient({
   establishments: initialEstablishments,
   terminals,
+  canManageTablet,
 }: {
   establishments: EstablishmentRow[]
   terminals: TerminalOption[]
+  canManageTablet: boolean
 }) {
   const router = useRouter()
   const [establishments, setEstablishments] = useState(initialEstablishments)
@@ -74,16 +76,6 @@ export function TabletPageClient({
 
   function getTabletLink(establishmentSlug: string) {
     return `${baseUrl}/restaurant/${establishmentSlug}`
-  }
-
-  async function copyTabletLink(establishmentSlug: string) {
-    const url = getTabletLink(establishmentSlug)
-    try {
-      await navigator.clipboard.writeText(url)
-      toast.success("Lien tablette copié")
-    } catch {
-      toast.error("Échec de la copie")
-    }
   }
 
   async function handleCreateEstablishment(e: React.FormEvent) {
@@ -208,6 +200,7 @@ export function TabletPageClient({
             Établissements et tables. Chaque établissement est lié à un POS ; les liens tablette envoient les commandes à ce POS.
           </p>
         </div>
+        {canManageTablet && (
         <Button
           onClick={() => {
             setEstablishmentModalOpen(true)
@@ -221,6 +214,7 @@ export function TabletPageClient({
         >
           <Plus className="mr-2 h-4 w-4" /> Nouvel établissement
         </Button>
+        )}
       </div>
 
       <div className="space-y-6">
@@ -245,14 +239,15 @@ export function TabletPageClient({
                 </div>
               </div>
               <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => copyTabletLink(establishment.slug)}
-                  className="text-xs"
+                <a
+                  href={getTabletLink(establishment.slug)}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20"
                 >
-                  <Copy className="h-3 w-3 mr-1" /> Copier le lien tablette
-                </Button>
+                  <ExternalLink className="h-3 w-3" />
+                  Ouvrir la tablette
+                </a>
+                {canManageTablet && (
+                <>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -290,6 +285,8 @@ export function TabletPageClient({
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
+                </>
+                )}
               </div>
             </div>
             <div className="p-5">
@@ -308,6 +305,8 @@ export function TabletPageClient({
                         <span className="text-xs text-muted-foreground">({table.slug})</span>
                       </div>
                       <div className="flex items-center gap-2">
+                        {canManageTablet && (
+                        <>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -329,6 +328,8 @@ export function TabletPageClient({
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>
+                        </>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -342,11 +343,16 @@ export function TabletPageClient({
       {establishments.length === 0 && (
         <div className="rounded-xl border border-dashed border-border p-12 text-center text-muted-foreground">
           <Tablet className="h-12 w-12 mx-auto mb-3 opacity-50" />
-          <p>Créez un établissement pour obtenir un lien tablette.</p>
+          <p>
+            {canManageTablet
+              ? "Créez un établissement pour obtenir un lien tablette."
+              : "Aucun établissement disponible pour le moment."}
+          </p>
         </div>
       )}
 
-      {/* Establishment modal (create / edit) */}
+      {canManageTablet && (
+      <>
       <Dialog
         open={establishmentModalOpen}
         onOpenChange={(open) => {
@@ -506,6 +512,8 @@ export function TabletPageClient({
         variant="destructive"
         onConfirm={handleDeleteTable}
       />
+      </>
+      )}
     </div>
   )
 }
