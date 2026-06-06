@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { cn } from "@/lib/utils"
+import { cn, toTitleCase } from "@/lib/utils"
 import { formatWithCurrency } from "@/lib/format-currency"
 import type { PosTerminalConfig } from "@/lib/pos-store"
 import {
@@ -111,7 +111,7 @@ export function TerminalCard({
           </div>
           <div>
             <h3 className="text-sm font-semibold text-card-foreground">
-              {terminal.name}
+              {toTitleCase(terminal.name)}
             </h3>
             <span
               className={cn(
@@ -168,7 +168,7 @@ export function TerminalCard({
       <div className="mt-4 space-y-2">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <MapPin className="h-3.5 w-3.5 shrink-0" />
-          {terminal.location}
+          {toTitleCase(terminal.location)}
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <User className="h-3.5 w-3.5 shrink-0" />
@@ -187,7 +187,7 @@ export function TerminalCard({
                     className="inline-flex items-center gap-1 rounded-md bg-secondary px-1.5 py-0.5 text-xs font-medium text-secondary-foreground"
                   >
                     <RootIcon className="h-3 w-3" />
-                    {root.name}
+                    {toTitleCase(root.name)}
                   </span>
                 )
               }
@@ -198,7 +198,7 @@ export function TerminalCard({
                   className="inline-flex items-center gap-1 rounded-md bg-secondary px-1.5 py-0.5 text-xs font-medium text-secondary-foreground"
                 >
                   <RootIcon className="h-3 w-3" />
-                  {root.name}
+                  {toTitleCase(root.name)}
                   {assignedChildren.length < totalChildren && (
                     <span className="text-muted-foreground">
                       ({assignedChildren.length}/{totalChildren})

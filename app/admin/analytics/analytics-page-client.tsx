@@ -24,7 +24,7 @@ import {
   ArrowDownRight,
   Monitor,
 } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn, toTitleCase } from "@/lib/utils"
 import { formatWithCurrency } from "@/lib/format-currency"
 
 type Period = "today" | "week" | "month"
@@ -311,7 +311,7 @@ export function AnalyticsPageClient({
                       const percent = total > 0 ? (p.revenue / total) * 100 : 0
                       return (
                         <div className="rounded-lg border border-border bg-card px-4 py-3 shadow-lg">
-                          <p className="text-sm font-semibold text-card-foreground">{p.name}</p>
+                          <p className="text-sm font-semibold text-card-foreground">{toTitleCase(p.name)}</p>
                           <p className="text-lg font-bold text-primary font-mono mt-0.5">
                             {formatCurrency(p.revenue)}
                           </p>
@@ -339,7 +339,7 @@ export function AnalyticsPageClient({
                       style={{ backgroundColor: entry.fill ?? CHART_FILLS_FALLBACK[i % CHART_FILLS_FALLBACK.length] }}
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-card-foreground truncate">{entry.name}</p>
+                      <p className="text-sm font-medium text-card-foreground truncate">{toTitleCase(entry.name)}</p>
                       <p className="text-xs text-muted-foreground">
                         {formatCurrency(entry.revenue)} · {(percent).toFixed(0)}%
                       </p>
@@ -456,7 +456,7 @@ export function AnalyticsPageClient({
               <div key={p.product.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
                 <div className="flex items-center gap-3">
                   <span className="text-muted-foreground font-mono w-6">{i + 1}</span>
-                  <span className="font-medium text-card-foreground">{p.product.name}</span>
+                  <span className="font-medium text-card-foreground">{toTitleCase(p.product.name)}</span>
                 </div>
                 <div className="flex items-center gap-4">
                   <span className="text-sm text-muted-foreground">{p.unitsSold} sold</span>
@@ -472,8 +472,8 @@ export function AnalyticsPageClient({
             {serverData.conversionByTerminal.map((t) => (
               <div key={t.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
                 <div>
-                  <p className="font-medium text-card-foreground">{t.name}</p>
-                  <p className="text-xs text-muted-foreground">{t.label}</p>
+                  <p className="font-medium text-card-foreground">{toTitleCase(t.name)}</p>
+                  <p className="text-xs text-muted-foreground">{toTitleCase(t.label)}</p>
                 </div>
                 <div className="text-right">
                   <p className="font-mono font-semibold text-card-foreground">{formatCurrency(t.revenue)}</p>

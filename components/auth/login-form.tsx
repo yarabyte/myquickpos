@@ -8,25 +8,88 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ThemeToggle } from "@/components/theme-toggle"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { toTitleCase } from "@/lib/utils"
 import { signIn } from "next-auth/react"
+import {
+  clearRememberedLogin,
+  loadRememberedLogin,
+  saveRememberedLogin,
+} from "@/lib/remember-login"
+import { releaseUiLock } from "@/lib/release-ui-lock"
 
-export function LoginForm() {
+type LoginFormProps = {
+  tenants: { slug: string; name: string }[]
+}
+
+function resolveTenantSlug(
+  tenants: { slug: string; name: string }[],
+  slugFromUrl: string | null,
+  rememberedSlug?: string | null
+) {
+  if (slugFromUrl && tenants.some((t) => t.slug === slugFromUrl)) return slugFromUrl
+  if (rememberedSlug && tenants.some((t) => t.slug === rememberedSlug)) return rememberedSlug
+  return tenants[0]?.slug ?? ""
+}
+
+export function LoginForm({ tenants }: LoginFormProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const callbackUrl = searchParams.get("callbackUrl") ?? "/admin"
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [tenantSlug, setTenantSlug] = useState("tenant1")
+  const [tenantSlug, setTenantSlug] = useState(() =>
+    resolveTenantSlug(
+      tenants,
+      searchParams.get("tenantSlug"),
+      loadRememberedLogin()?.tenantSlug
+    )
+  )
+  const [tenantSelectOpen, setTenantSelectOpen] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
 
   useEffect(() => {
-    const slug = searchParams.get("tenantSlug")
-    if (slug) setTenantSlug(slug)
-  }, [searchParams])
+    const remembered = loadRememberedLogin()
+    if (remembered) {
+      setEmail(remembered.email)
+      setRememberMe(true)
+    }
+  }, [])
+
+  useEffect(() => {
+    const remembered = loadRememberedLogin()
+    const urlSlug = searchParams.get("tenantSlug")
+    const slug = resolveTenantSlug(tenants, urlSlug, remembered?.tenantSlug)
+
+    if (slug) {
+      setTenantSlug(slug)
+    }
+
+    const hasValidUrlSlug = Boolean(
+      urlSlug && tenants.some((t) => t.slug === urlSlug)
+    )
+    if (slug && !hasValidUrlSlug) {
+      const params = new URLSearchParams(searchParams.toString())
+      params.set("tenantSlug", slug)
+      router.replace(`/login?${params.toString()}`, { scroll: false })
+    }
+  }, [searchParams, tenants, router])
+
+  function handleTenantChange(slug: string) {
+    setTenantSlug(slug)
+    const params = new URLSearchParams(searchParams.toString())
+    params.set("tenantSlug", slug)
+    router.replace(`/login?${params.toString()}`)
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -38,6 +101,7 @@ export function LoginForm() {
         email,
         password,
         tenantSlug,
+        rememberMe: rememberMe ? "true" : "false",
         redirect: false,
       })
 
@@ -47,6 +111,14 @@ export function LoginForm() {
         return
       }
 
+      if (rememberMe) {
+        saveRememberedLogin(email, tenantSlug)
+      } else {
+        clearRememberedLogin()
+      }
+
+      setTenantSelectOpen(false)
+      releaseUiLock()
       router.push(callbackUrl)
       router.refresh()
     } catch (err) {
@@ -88,6 +160,35 @@ export function LoginForm() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+          {tenants.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="tenant" className="text-foreground">
+                Tenant
+              </Label>
+              <Select
+                modal={false}
+                open={tenantSelectOpen}
+                onOpenChange={setTenantSelectOpen}
+                value={tenantSlug}
+                onValueChange={handleTenantChange}
+              >
+                <SelectTrigger
+                  id="tenant"
+                  className="h-11 bg-card text-card-foreground"
+                >
+                  <SelectValue placeholder="Select a tenant" />
+                </SelectTrigger>
+                <SelectContent>
+                  {tenants.map((tenant) => (
+                    <SelectItem key={tenant.slug} value={tenant.slug}>
+                      {toTitleCase(tenant.name)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div className="flex flex-col gap-2">
             <Label htmlFor="email" className="text-foreground">
               Email address
@@ -162,7 +263,7 @@ export function LoginForm() {
             type="submit"
             size="lg"
             className="h-11 w-full text-sm font-semibold"
-            disabled={isLoading}
+            disabled={isLoading || !tenantSlug}
           >
             {isLoading ? (
               <>

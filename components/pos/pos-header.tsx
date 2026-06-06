@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
+import { toTitleCase } from "@/lib/utils"
 
 interface PosHeaderProps {
   onSearch: (query: string) => void
@@ -89,7 +90,7 @@ export function PosHeader({ onSearch, terminalName, cashierName }: PosHeaderProp
           <h1 className="text-base font-bold text-card-foreground leading-none">
             MyQuickPOS
           </h1>
-          <p className="text-xs text-muted-foreground mt-0.5">{terminalName ?? "Terminal 01"}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{toTitleCase(terminalName ?? "Terminal 01")}</p>
         </div>
       </div>
 

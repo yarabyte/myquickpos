@@ -8,15 +8,19 @@ const signInSchema = z.object({
   email: z.string().email("Invalid email"),
   password: z.string().min(1, "Password is required"),
   tenantSlug: z.string().optional().default("tenant1"),
+  rememberMe: z.enum(["true", "false"]).optional().default("false"),
 })
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  secret: process.env.AUTH_SECRET,
+  trustHost: true,
   providers: [
     Credentials({
       credentials: {
         email: {},
         password: {},
         tenantSlug: {},
+        rememberMe: {},
       },
       authorize: async (credentials) => {
         try {
@@ -26,7 +30,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             return null
           }
 
-          const { email, password, tenantSlug } = parsed.data
+          const { email, password, tenantSlug, rememberMe } = parsed.data
 
           const tenant = await tenantRepository.findBySlug(tenantSlug)
           if (!tenant) {
@@ -47,6 +51,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             role: user.role,
             tenantId: tenant.id,
             tenantSlug: tenant.slug,
+            rememberMe: rememberMe === "true",
           }
         } catch (err) {
           console.error("[Auth] authorize error:", err)
@@ -62,6 +67,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.tenantId = (user as { tenantId?: string }).tenantId
         token.tenantSlug = (user as { tenantSlug?: string }).tenantSlug
         token.role = (user as { role?: string }).role
+        const rememberMe = (user as { rememberMe?: boolean }).rememberMe
+        const maxAge = rememberMe ? 30 * 24 * 60 * 60 : 24 * 60 * 60
+        token.exp = Math.floor(Date.now() / 1000) + maxAge
       }
       return token
     },

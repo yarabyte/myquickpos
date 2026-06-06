@@ -1,17 +1,23 @@
 "use client"
 
 import { useState, useMemo, useCallback } from "react"
-import { submitEstablishmentOrder } from "@/app/actions/table-orders"
+import {
+  submitEstablishmentOrder,
+  updatePendingEstablishmentOrder,
+  type EstablishmentOrderSummary,
+} from "@/app/actions/table-orders"
 import type { CartItem, Product, Category } from "@/lib/pos-data"
 import { CategoryBar } from "@/components/pos/category-bar"
 import { ProductGrid } from "@/components/pos/product-grid"
+import { RestaurantOrderHistory } from "@/components/restaurant/restaurant-order-history"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { formatWithCurrency } from "@/lib/format-currency"
-import { toTitleCase } from "@/lib/utils"
+import { toTitleCase, cn } from "@/lib/utils"
 import { toast } from "sonner"
-import { Send, UtensilsCrossed } from "lucide-react"
-import { Minus, Plus, Trash2, ShoppingCart } from "lucide-react"
+import { Send, UtensilsCrossed, ShoppingCart, X } from "lucide-react"
+import { Minus, Plus, Trash2 } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
 interface RestaurantEstablishmentViewProps {
   establishmentSlug: string
@@ -22,6 +28,8 @@ interface RestaurantEstablishmentViewProps {
   taxRate: number
   currency: string
 }
+
+type SidebarTab = "order" | "history"
 
 export function RestaurantEstablishmentView({
   establishmentSlug,
@@ -37,9 +45,18 @@ export function RestaurantEstablishmentView({
     [currency]
   )
   const [activeCategory, setActiveCategory] = useState("all")
+  const [sidebarTab, setSidebarTab] = useState<SidebarTab>("order")
   const [cart, setCart] = useState<CartItem[]>([])
   const [orderLabel, setOrderLabel] = useState("")
   const [sending, setSending] = useState(false)
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0)
+  const [editingOrder, setEditingOrder] = useState<EstablishmentOrderSummary | null>(null)
+  const [confirmSendOpen, setConfirmSendOpen] = useState(false)
+
+  const productMap = useMemo(
+    () => new Map(allProducts.map((p) => [p.id, p])),
+    [allProducts]
+  )
 
   const getDescendantIds = useCallback((categoryId: string): string[] => {
     const kids = categories.filter((c) => c.parentId === categoryId)
@@ -82,7 +99,42 @@ export function RestaurantEstablishmentView({
     setCart((prev) => prev.filter((item) => item.product.id !== productId))
   }, [])
 
-  const clearCart = useCallback(() => setCart([]), [])
+  const clearCart = useCallback(() => {
+    setCart([])
+    setOrderLabel("")
+    setEditingOrder(null)
+  }, [])
+
+  const cancelEdit = useCallback(() => {
+    setEditingOrder(null)
+    setCart([])
+    setOrderLabel("")
+  }, [])
+
+  const loadOrderForEdit = useCallback(
+    (order: EstablishmentOrderSummary) => {
+      const items: CartItem[] = []
+      for (const item of order.items) {
+        const product = productMap.get(item.productId)
+        if (!product) {
+          toast.error("Produit introuvable", {
+            description: `${item.productName} n'est plus disponible.`,
+          })
+          continue
+        }
+        items.push({ product, quantity: item.quantity })
+      }
+      if (items.length === 0) {
+        toast.error("Impossible de modifier cette commande")
+        return
+      }
+      setEditingOrder(order)
+      setCart(items)
+      setOrderLabel(order.orderLabel ?? "")
+      setSidebarTab("order")
+    },
+    [productMap]
+  )
 
   const subtotal = useMemo(
     () => cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0),
@@ -91,20 +143,14 @@ export function RestaurantEstablishmentView({
   const tax = subtotal * (taxRate / 100)
   const total = subtotal + tax
 
-  const handleSendToPos = useCallback(async () => {
-    if (cart.length === 0) {
-      toast.error("Panier vide", { description: "Ajoutez au moins un article." })
-      return
-    }
-    const label = orderLabel?.trim()
-    if (!label) {
-      toast.error("Nom requis", {
-        description: "Indiquez le nom de la table ou du client avant d'envoyer.",
-      })
-      return
-    }
-    setSending(true)
-    const result = await submitEstablishmentOrder({
+  const itemCount = useMemo(
+    () => cart.reduce((sum, item) => sum + item.quantity, 0),
+    [cart]
+  )
+
+  const executeSubmit = useCallback(async () => {
+    const label = orderLabel.trim()
+    const payload = {
       establishmentSlug,
       items: cart.map((item) => ({
         productId: item.product.id,
@@ -116,18 +162,64 @@ export function RestaurantEstablishmentView({
       tax,
       discount: 0,
       orderLabel: label,
-    })
+    }
+
+    setSending(true)
+
+    if (editingOrder) {
+      const result = await updatePendingEstablishmentOrder({
+        ...payload,
+        orderId: editingOrder.id,
+      })
+      setSending(false)
+      if (result.success) {
+        setCart([])
+        setOrderLabel("")
+        setEditingOrder(null)
+        setHistoryRefreshKey((k) => k + 1)
+        toast.success("Commande mise à jour", {
+          description: `Commande ${result.data.orderNumber} modifiée.`,
+        })
+      } else {
+        toast.error(result.error)
+      }
+      return
+    }
+
+    const result = await submitEstablishmentOrder(payload)
     setSending(false)
     if (result.success) {
       setCart([])
       setOrderLabel("")
+      setHistoryRefreshKey((k) => k + 1)
       toast.success("Commande envoyée au POS", {
         description: `Commande ${result.data.orderNumber} en attente.`,
       })
     } else {
       toast.error(result.error)
     }
-  }, [cart, establishmentSlug, subtotal, tax, orderLabel])
+  }, [cart, establishmentSlug, subtotal, tax, orderLabel, editingOrder])
+
+  const handleSendClick = useCallback(() => {
+    if (cart.length === 0) {
+      toast.error("Panier vide", { description: "Ajoutez au moins un article." })
+      return
+    }
+    const label = orderLabel?.trim()
+    if (!label) {
+      toast.error("Nom requis", {
+        description: "Indiquez le nom de la table ou du client avant d'envoyer.",
+      })
+      return
+    }
+
+    if (editingOrder) {
+      void executeSubmit()
+      return
+    }
+
+    setConfirmSendOpen(true)
+  }, [cart, orderLabel, editingOrder, executeSubmit])
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-background">
@@ -137,7 +229,7 @@ export function RestaurantEstablishmentView({
         </div>
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-lg font-semibold text-card-foreground">
-            {establishment.name}
+            {toTitleCase(establishment.name)}
           </h1>
           <p className="truncate text-sm text-muted-foreground">
             Indiquez le nom de la table ou du client avant d&apos;envoyer.
@@ -170,130 +262,215 @@ export function RestaurantEstablishmentView({
         </div>
 
         <div className="flex w-full max-w-[440px] flex-col gap-3 border-l border-border bg-background p-3 sm:w-[420px]">
-          <div className="flex flex-1 flex-col gap-3 overflow-hidden rounded-xl border border-border bg-card">
-            <div className="flex items-center justify-between p-3">
-              <div className="flex items-center gap-2">
-                <ShoppingCart className="h-5 w-5 text-primary" />
-                <h2 className="text-base font-semibold text-card-foreground">Commande</h2>
-                {cart.length > 0 && (
-                  <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-bold text-primary-foreground">
-                    {cart.reduce((s, i) => s + i.quantity, 0)}
-                  </span>
-                )}
-              </div>
-              {cart.length > 0 && (
-                <button
-                  type="button"
-                  onClick={clearCart}
-                  className="text-xs font-medium text-destructive hover:text-destructive/80"
-                >
-                  Tout vider
-                </button>
+          <div className="flex rounded-lg border border-border bg-card p-1">
+            <button
+              type="button"
+              onClick={() => setSidebarTab("order")}
+              className={cn(
+                "flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-sm font-medium transition-colors touch-manipulation",
+                sidebarTab === "order"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
               )}
-            </div>
-            <Separator />
-            <ScrollArea className="flex-1 px-3">
-              {cart.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
-                  <ShoppingCart className="mb-2 h-10 w-10 opacity-30" />
-                  <p className="text-sm">Aucun article</p>
-                  <p className="text-xs">Touchez un produit pour l&apos;ajouter</p>
-                </div>
-              ) : (
-                <div className="space-y-2 py-2">
-                  {cart.map((item) => (
-                    <div
-                      key={item.product.id}
-                      className="flex items-center gap-2 rounded-lg p-2.5 hover:bg-secondary/50"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-card-foreground">
-                          {toTitleCase(item.product.name)}
-                        </p>
-                        <p className="text-xs text-muted-foreground font-mono">
-                          {formatCurrency(item.product.price)} × {item.quantity}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => updateQuantity(item.product.id, -1)}
-                          className="flex h-9 w-9 items-center justify-center rounded-lg bg-secondary text-secondary-foreground touch-manipulation"
-                        >
-                          <Minus className="h-3.5 w-3.5" />
-                        </button>
-                        <span className="w-7 text-center text-sm font-semibold">{item.quantity}</span>
-                        <button
-                          type="button"
-                          onClick={() => updateQuantity(item.product.id, 1)}
-                          className="flex h-9 w-9 items-center justify-center rounded-lg bg-secondary text-secondary-foreground touch-manipulation"
-                        >
-                          <Plus className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeItem(item.product.id)}
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-destructive/15 text-destructive hover:bg-destructive/25 active:bg-destructive/35 touch-manipulation"
-                        aria-label="Supprimer"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
+            >
+              <ShoppingCart className="h-4 w-4" />
+              Commande
+            </button>
+            <button
+              type="button"
+              onClick={() => setSidebarTab("history")}
+              className={cn(
+                "flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-sm font-medium transition-colors touch-manipulation",
+                sidebarTab === "history"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
               )}
-            </ScrollArea>
+            >
+              Historique
+            </button>
+          </div>
 
-            {cart.length > 0 && (
-              <>
-                <Separator />
-                <div className="space-y-3 p-3">
-                  <div className="space-y-1.5">
-                    <label htmlFor="order-label" className="text-xs font-medium text-muted-foreground">
-                      Nom de la table ou du client <span className="text-destructive">*</span>
-                    </label>
-                    <input
-                      id="order-label"
-                      type="text"
-                      value={orderLabel}
-                      onChange={(e) => setOrderLabel(e.target.value)}
-                      placeholder="Table 5 ou nom du client"
-                      className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                    />
-                  </div>
-                  <div className="space-y-1 text-sm">
-                    <div className="flex justify-between text-muted-foreground">
-                      <span>Sous-total</span>
-                      <span className="font-mono">{formatCurrency(subtotal)}</span>
-                    </div>
-                    {taxRate > 0 && (
-                      <div className="flex justify-between text-muted-foreground">
-                        <span>TVA ({taxRate}%)</span>
-                        <span className="font-mono">{formatCurrency(tax)}</span>
-                      </div>
-                    )}
-                    <Separator />
-                    <div className="flex justify-between font-semibold text-card-foreground">
-                      <span>Total</span>
-                      <span className="font-mono">{formatCurrency(total)}</span>
-                    </div>
-                  </div>
+          {sidebarTab === "history" ? (
+            <RestaurantOrderHistory
+              establishmentSlug={establishmentSlug}
+              currency={currency}
+              onEditOrder={loadOrderForEdit}
+              refreshKey={historyRefreshKey}
+            />
+          ) : (
+            <div className="flex flex-1 flex-col gap-3 overflow-hidden rounded-xl border border-border bg-card">
+              {editingOrder && (
+                <div className="flex items-center justify-between gap-2 border-b border-border bg-amber-500/10 px-3 py-2">
+                  <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                    Modification · {editingOrder.orderNumber}
+                  </p>
                   <button
                     type="button"
-                    onClick={handleSendToPos}
-                    disabled={sending}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 text-base font-bold text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98] disabled:opacity-70 touch-manipulation"
+                    onClick={cancelEdit}
+                    className="flex h-7 w-7 items-center justify-center rounded-md text-amber-700 hover:bg-amber-500/20 dark:text-amber-400"
+                    aria-label="Annuler la modification"
                   >
-                    <Send className="h-5 w-5" />
-                    {sending ? "Envoi…" : "Envoyer au POS"}
+                    <X className="h-4 w-4" />
                   </button>
                 </div>
-              </>
-            )}
-          </div>
+              )}
+
+              <div className="flex items-center justify-between p-3">
+                <div className="flex items-center gap-2">
+                  <ShoppingCart className="h-5 w-5 text-primary" />
+                  <h2 className="text-base font-semibold text-card-foreground">
+                    {editingOrder ? "Modifier la commande" : "Commande"}
+                  </h2>
+                  {cart.length > 0 && (
+                    <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-bold text-primary-foreground">
+                      {cart.reduce((s, i) => s + i.quantity, 0)}
+                    </span>
+                  )}
+                </div>
+                {cart.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={clearCart}
+                    className="text-xs font-medium text-destructive hover:text-destructive/80"
+                  >
+                    Tout vider
+                  </button>
+                )}
+              </div>
+              <Separator />
+              <ScrollArea className="flex-1 px-3">
+                {cart.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+                    <ShoppingCart className="mb-2 h-10 w-10 opacity-30" />
+                    <p className="text-sm">Aucun article</p>
+                    <p className="text-xs">Touchez un produit pour l&apos;ajouter</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 py-2">
+                    {cart.map((item) => (
+                      <div
+                        key={item.product.id}
+                        className="flex items-center gap-2 rounded-lg p-2.5 hover:bg-secondary/50"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-card-foreground">
+                            {toTitleCase(item.product.name)}
+                          </p>
+                          <p className="text-xs text-muted-foreground font-mono">
+                            {formatCurrency(item.product.price)} × {item.quantity}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => updateQuantity(item.product.id, -1)}
+                            className="flex h-9 w-9 items-center justify-center rounded-lg bg-secondary text-secondary-foreground touch-manipulation"
+                          >
+                            <Minus className="h-3.5 w-3.5" />
+                          </button>
+                          <span className="w-7 text-center text-sm font-semibold">{item.quantity}</span>
+                          <button
+                            type="button"
+                            onClick={() => updateQuantity(item.product.id, 1)}
+                            className="flex h-9 w-9 items-center justify-center rounded-lg bg-secondary text-secondary-foreground touch-manipulation"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeItem(item.product.id)}
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-destructive/15 text-destructive hover:bg-destructive/25 active:bg-destructive/35 touch-manipulation"
+                          aria-label="Supprimer"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </ScrollArea>
+
+              {cart.length > 0 && (
+                <>
+                  <Separator />
+                  <div className="space-y-3 p-3">
+                    <div className="space-y-1.5">
+                      <label htmlFor="order-label" className="text-xs font-medium text-muted-foreground">
+                        Nom de la table ou du client <span className="text-destructive">*</span>
+                      </label>
+                      <input
+                        id="order-label"
+                        type="text"
+                        value={orderLabel}
+                        onChange={(e) => setOrderLabel(e.target.value)}
+                        placeholder="Table 5 ou nom du client"
+                        className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                      />
+                    </div>
+                    <div className="space-y-1 text-sm">
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Sous-total</span>
+                        <span className="font-mono">{formatCurrency(subtotal)}</span>
+                      </div>
+                      {taxRate > 0 && (
+                        <div className="flex justify-between text-muted-foreground">
+                          <span>TVA ({taxRate}%)</span>
+                          <span className="font-mono">{formatCurrency(tax)}</span>
+                        </div>
+                      )}
+                      <Separator />
+                      <div className="flex justify-between font-semibold text-card-foreground">
+                        <span>Total</span>
+                        <span className="font-mono">{formatCurrency(total)}</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleSendClick}
+                      disabled={sending}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 text-base font-bold text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98] disabled:opacity-70 touch-manipulation"
+                    >
+                      <Send className="h-5 w-5" />
+                      {sending
+                        ? "Envoi…"
+                        : editingOrder
+                          ? "Enregistrer les modifications"
+                          : "Envoyer au POS"}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmSendOpen}
+        onOpenChange={setConfirmSendOpen}
+        title="Envoyer au POS ?"
+        description={
+          <div className="space-y-2 text-sm">
+            <p>
+              Confirmer l&apos;envoi de la commande pour{" "}
+              <strong>{toTitleCase(orderLabel.trim())}</strong> ?
+            </p>
+            <p className="text-muted-foreground">
+              {itemCount} article{itemCount !== 1 ? "s" : ""} · Total{" "}
+              <span className="font-mono font-semibold text-card-foreground">
+                {formatCurrency(total)}
+              </span>
+            </p>
+          </div>
+        }
+        icon={<Send className="h-6 w-6" />}
+        confirmLabel="Envoyer"
+        cancelLabel="Annuler"
+        variant="default"
+        loading={sending}
+        onConfirm={executeSubmit}
+      />
     </div>
   )
 }

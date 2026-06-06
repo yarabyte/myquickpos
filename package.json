@@ -2,16 +2,20 @@
   "name": "my-project",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "next dev --turbo",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
+    "postinstall": "prisma generate",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
-    "db:import-yaralodge": "tsx scripts/import-yaralodge.ts",
+    "db:import-dump": "bash scripts/import-sql-dump.sh",
     "db:set-stock-100": "tsx scripts/set-all-stock-to-100.ts",
     "db:set-bar-restaurant-stock-100": "tsx scripts/set-bar-restaurant-stock-100.ts",
     "db:studio": "prisma studio",

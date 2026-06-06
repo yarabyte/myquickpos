@@ -50,6 +50,8 @@ export function ConfirmDialog({
     }
   }
 
+  if (!open) return null
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="sm:max-w-md bg-card border-border">

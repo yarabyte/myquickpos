@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { cn } from "@/lib/utils"
+import { cn, toTitleCase } from "@/lib/utils"
 import { formatWithCurrency } from "@/lib/format-currency"
 import { addRestock, addAdjustment, addQuickDelta, addTransferBatch } from "@/app/actions/stock"
 import { getCategoryIcon } from "@/lib/category-icons"
@@ -410,13 +410,13 @@ export function StockPageClient({
             >
               <option value="all">All Categories</option>
               {categoryTree.map((root) => (
-                <optgroup key={root.id} label={root.name}>
+                <optgroup key={root.id} label={toTitleCase(root.name)}>
                   <option value={root.id}>
-                    {root.name} (all)
+                    {toTitleCase(root.name)} (all)
                   </option>
                   {root.children.map((sub) => (
                     <option key={sub.id} value={sub.id}>
-                      {"\u00A0\u00A0"} {sub.name}
+                      {"\u00A0\u00A0"} {toTitleCase(sub.name)}
                     </option>
                   ))}
                 </optgroup>
@@ -463,13 +463,13 @@ export function StockPageClient({
                         <div className="flex items-center gap-3">
                           <div className="h-10 w-10 rounded-lg overflow-hidden bg-secondary flex items-center justify-center">
                             {row.image ? (
-                              <img src={row.image} alt={row.name} className="h-full w-full object-cover" />
+                              <img src={row.image} alt={toTitleCase(row.name)} className="h-full w-full object-cover" />
                             ) : (
                               <Warehouse className="h-5 w-5 text-muted-foreground" />
                             )}
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-card-foreground">{row.name}</p>
+                            <p className="text-sm font-medium text-card-foreground">{toTitleCase(row.name)}</p>
                             <p className="text-xs text-muted-foreground">{formatCurrency(row.price)}</p>
                           </div>
                         </div>
@@ -478,7 +478,7 @@ export function StockPageClient({
                         {CatIcon && row.categoryInfo && (
                           <div className="flex items-center gap-1.5">
                             <CatIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span className="text-sm text-muted-foreground">{row.categoryInfo.name}</span>
+                            <span className="text-sm text-muted-foreground">{toTitleCase(row.categoryInfo.name)}</span>
                           </div>
                         )}
                       </td>
@@ -842,13 +842,13 @@ function RestockModal({
                 {categoryTree.map((root) =>
                   root.children.length === 0 ? (
                     <option key={root.id} value={root.id}>
-                      {root.name}
+                      {toTitleCase(root.name)}
                     </option>
                   ) : (
-                    <optgroup key={root.id} label={root.name}>
+                    <optgroup key={root.id} label={toTitleCase(root.name)}>
                       {root.children.map((ch) => (
                         <option key={ch.id} value={ch.id}>
-                          {ch.name}
+                          {toTitleCase(ch.name)}
                         </option>
                       ))}
                     </optgroup>
@@ -870,7 +870,7 @@ function RestockModal({
                     </option>
                     {productsByCategory.map((p) => (
                       <option key={p.id} value={p.id}>
-                        {p.name} ({formatCurrency(p.price)})
+                        {toTitleCase(p.name)} ({formatCurrency(p.price)})
                       </option>
                     ))}
                   </select>
@@ -1021,13 +1021,13 @@ function AdjustModal({
               {categoryTree.map((root) =>
                 root.children.length === 0 ? (
                   <option key={root.id} value={root.id}>
-                    {root.name}
+                    {toTitleCase(root.name)}
                   </option>
                 ) : (
-                  <optgroup key={root.id} label={root.name}>
+                  <optgroup key={root.id} label={toTitleCase(root.name)}>
                     {root.children.map((ch) => (
                       <option key={ch.id} value={ch.id}>
-                        {ch.name}
+                        {toTitleCase(ch.name)}
                       </option>
                     ))}
                   </optgroup>
@@ -1051,7 +1051,7 @@ function AdjustModal({
               <option value="">Select product...</option>
               {productsByCategory.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name}
+                  {toTitleCase(p.name)}
                 </option>
               ))}
             </select>
@@ -1255,13 +1255,13 @@ function TransferModal({
                 {categoryTree.map((root) =>
                   root.children.length === 0 ? (
                     <option key={root.id} value={root.id}>
-                      {root.name}
+                      {toTitleCase(root.name)}
                     </option>
                   ) : (
-                    <optgroup key={root.id} label={root.name}>
+                    <optgroup key={root.id} label={toTitleCase(root.name)}>
                       {root.children.map((ch) => (
                         <option key={ch.id} value={ch.id}>
-                          {ch.name}
+                          {toTitleCase(ch.name)}
                         </option>
                       ))}
                     </optgroup>
@@ -1283,7 +1283,7 @@ function TransferModal({
                     </option>
                     {productsByCategory.map((p) => (
                       <option key={p.id} value={p.id}>
-                        {p.name}
+                        {toTitleCase(p.name)}
                       </option>
                     ))}
                   </select>

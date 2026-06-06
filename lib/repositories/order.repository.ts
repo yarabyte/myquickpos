@@ -101,4 +101,71 @@ export const orderRepository = {
     const num = last ? parseInt(last.orderNumber.replace(/\D/g, ""), 10) + 1 : 1000
     return `ORD-${num}`
   },
+
+  /** Tablet orders sent to a terminal (orderLabel or tableId set). */
+  findTabletOrdersByTerminal: (
+    tenantId: string,
+    terminalId: string,
+    options?: { take?: number; from?: Date; to?: Date }
+  ) => {
+    const where: Parameters<typeof prisma.order.findMany>[0]["where"] = {
+      tenantId,
+      terminalId,
+      OR: [{ orderLabel: { not: null } }, { tableId: { not: null } }],
+    }
+    if (options?.from || options?.to) {
+      where.createdAt = {}
+      if (options.from) where.createdAt.gte = options.from
+      if (options.to) where.createdAt.lte = options.to
+    }
+    return prisma.order.findMany({
+      where,
+      take: options?.take ?? 100,
+      include: {
+        items: { include: { product: { select: { id: true, name: true } } } },
+      },
+      orderBy: { createdAt: "desc" },
+    })
+  },
+
+  updatePendingOrder: async (
+    id: string,
+    tenantId: string,
+    data: {
+      orderLabel?: string
+      subtotal: number
+      tax: number
+      discount?: number
+      total: number
+      items: { productId: string; quantity: number; unitPrice: number; total: number }[]
+    }
+  ) => {
+    const existing = await prisma.order.findFirst({
+      where: { id, tenantId, status: "PENDING" },
+    })
+    if (!existing) throw new Error("Order not found or not pending")
+
+    return prisma.$transaction(async (tx) => {
+      await tx.orderItem.deleteMany({ where: { orderId: id } })
+      return tx.order.update({
+        where: { id },
+        data: {
+          ...(data.orderLabel !== undefined && { orderLabel: data.orderLabel }),
+          subtotal: data.subtotal,
+          tax: data.tax,
+          discount: data.discount ?? 0,
+          total: data.total,
+          items: {
+            create: data.items.map((item) => ({
+              productId: item.productId,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              total: item.total,
+            })),
+          },
+        },
+        include: { items: { include: { product: true } } },
+      })
+    })
+  },
 }

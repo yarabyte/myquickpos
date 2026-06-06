@@ -304,6 +304,61 @@ textarea {
   display: block;
 }
 
+/* Thermal receipt — fluid width from paper size (58mm / 80mm), no fixed px columns */
+.receipt-thermal-pro {
+  width: 100%;
+  max-width: var(--receipt-paper-width, 80mm);
+  min-width: 0;
+  box-sizing: border-box;
+  padding: var(--receipt-padding, 4mm 3mm);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.receipt-thermal-pro[data-paper-width="58mm"] {
+  --receipt-paper-width: 58mm;
+  --receipt-padding: 3mm 2mm;
+}
+
+.receipt-thermal-pro[data-paper-width="80mm"] {
+  --receipt-paper-width: 80mm;
+  --receipt-padding: 4mm 3mm;
+}
+
+.receipt-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 0.15em 0.5em;
+  align-items: baseline;
+}
+
+.receipt-line .receipt-col-name {
+  min-width: 0;
+}
+
+.receipt-line .receipt-col-qty {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.receipt-line .receipt-col-amount {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.receipt-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5em;
+}
+
+.receipt-row > :last-child {
+  text-align: right;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 /* Receipt print simulation animation */
 @keyframes receipt-print {
   0% {
@@ -325,6 +380,10 @@ textarea {
 
 /* Receipt direct print: only show receipt content when printing */
 @media print {
+  @page {
+    margin: 0;
+  }
+
   body * {
     visibility: hidden;
   }
@@ -336,7 +395,15 @@ textarea {
     position: absolute;
     left: 0;
     top: 0;
-    width: 100%;
+    width: var(--receipt-paper-width, 80mm) !important;
+    max-width: none !important;
     background: white;
+    box-shadow: none !important;
+  }
+  .receipt-print-only[data-paper-width="58mm"] {
+    --receipt-paper-width: 58mm;
+  }
+  .receipt-print-only[data-paper-width="80mm"] {
+    --receipt-paper-width: 80mm;
   }
 }

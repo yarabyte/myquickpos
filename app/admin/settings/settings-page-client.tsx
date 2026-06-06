@@ -239,12 +239,13 @@ export function SettingsPageClient({ initialSettings }: { initialSettings: Initi
                 Simulated {printer.paperWidth} thermal receipt
               </p>
               <div
+                data-paper-width={printer.paperWidth}
                 className={cn(
-                  "mx-auto rounded-md border border-dashed border-border bg-white text-black overflow-hidden",
-                  printer.paperWidth === "58mm" ? "max-w-[220px]" : "max-w-[280px]"
+                  "mx-auto rounded-md border border-dashed border-border bg-white text-black overflow-hidden receipt-thermal-pro font-mono",
+                  printer.paperWidth === "58mm" ? "text-[10px]" : "text-[11px]"
                 )}
               >
-                <div className="px-3 py-4 space-y-0">
+                <div className="space-y-0">
                   <div
                     className="receipt-preview"
                     dangerouslySetInnerHTML={{ __html: printer.headerHtml }}
@@ -252,16 +253,16 @@ export function SettingsPageClient({ initialSettings }: { initialSettings: Initi
 
                   <div className="border-t border-dashed border-neutral-300 my-2" />
 
-                  <div className="space-y-1 text-[11px] leading-tight font-mono">
-                    <div className="flex justify-between">
+                  <div className="space-y-1 leading-tight">
+                    <div className="receipt-row">
                       <span>Classic Burger x2</span>
                       <span>{formatWithCurrency(17.98)}</span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="receipt-row">
                       <span>French Fries x1</span>
                       <span>{formatWithCurrency(4.49)}</span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="receipt-row">
                       <span>Cola x2</span>
                       <span>{formatWithCurrency(4.98)}</span>
                     </div>
@@ -269,16 +270,16 @@ export function SettingsPageClient({ initialSettings }: { initialSettings: Initi
 
                   <div className="border-t border-dashed border-neutral-300 my-2" />
 
-                  <div className="space-y-0.5 text-[11px] leading-tight font-mono">
-                    <div className="flex justify-between">
+                  <div className="space-y-0.5 leading-tight">
+                    <div className="receipt-row">
                       <span>Subtotal</span>
                       <span>{formatWithCurrency(27.45)}</span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="receipt-row">
                       <span>Tax ({taxRate}%)</span>
                       <span>{formatWithCurrency(27.45 * parseFloat(taxRate || "0") / 100)}</span>
                     </div>
-                    <div className="flex justify-between font-bold text-xs pt-0.5">
+                    <div className="receipt-row font-bold pt-0.5">
                       <span>TOTAL</span>
                       <span>{formatWithCurrency(27.45 + 27.45 * parseFloat(taxRate || "0") / 100)}</span>
                     </div>
@@ -286,12 +287,12 @@ export function SettingsPageClient({ initialSettings }: { initialSettings: Initi
 
                   <div className="border-t border-dashed border-neutral-300 my-2" />
 
-                  <div className="space-y-0.5 text-[11px] leading-tight font-mono">
-                    <div className="flex justify-between">
+                  <div className="space-y-0.5 leading-tight">
+                    <div className="receipt-row">
                       <span>Paid: Cash</span>
                       <span>{formatWithCurrency(30)}</span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="receipt-row">
                       <span>Change</span>
                       <span>{formatWithCurrency(30 - (27.45 + 27.45 * parseFloat(taxRate || "0") / 100))}</span>
                     </div>

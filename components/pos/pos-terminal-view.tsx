@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useMemo, useCallback } from "react"
+import { useState, useMemo, useCallback, useEffect, useRef } from "react"
 import { createOrder } from "@/app/actions/orders"
 import { deleteSavedCart } from "@/app/actions/saved-carts"
+import { getPendingTableOrders } from "@/app/actions/table-orders"
 import type { CartItem, Product, Category } from "@/lib/pos-data"
 import { PosHeader } from "./pos-header"
 import { CategoryBar } from "./category-bar"
@@ -75,6 +76,40 @@ export function PosTerminalView({
   const [recalledSavedCartId, setRecalledSavedCartId] = useState<string | null>(null)
   const [tableOrderModalOrder, setTableOrderModalOrder] = useState<PendingTableOrder | null>(null)
   const [tableOrderModalOpen, setTableOrderModalOpen] = useState(false)
+  const [pendingOrders, setPendingOrders] = useState(pendingTableOrders)
+  const previousCountRef = useRef(pendingTableOrders.length)
+  const isFirstPollRef = useRef(true)
+
+  useEffect(() => {
+    setPendingOrders(pendingTableOrders)
+    previousCountRef.current = pendingTableOrders.length
+  }, [pendingTableOrders])
+
+  const refreshPendingOrders = useCallback(async () => {
+    if (document.visibilityState === "hidden") return
+    const result = await getPendingTableOrders(terminalId)
+    if (!result.success) return
+
+    const next = result.data.map((o) => ({
+      ...o,
+      createdAt: new Date(o.createdAt),
+    }))
+
+    if (!isFirstPollRef.current && next.length > previousCountRef.current) {
+      toast.info("Nouvelle commande tablette", {
+        description: `${next.length - previousCountRef.current} commande(s) en attente.`,
+      })
+    }
+    isFirstPollRef.current = false
+    previousCountRef.current = next.length
+    setPendingOrders(next)
+  }, [terminalId])
+
+  useEffect(() => {
+    refreshPendingOrders()
+    const interval = setInterval(refreshPendingOrders, 5000)
+    return () => clearInterval(interval)
+  }, [refreshPendingOrders])
 
   const getDescendantIds = useCallback((categoryId: string): string[] => {
     const kids = categories.filter((c) => c.parentId === categoryId)
@@ -251,18 +286,18 @@ export function PosTerminalView({
 
         {/* Right: Pending table orders + Order panel */}
         <div className="flex w-[420px] flex-col gap-3 border-l border-border bg-background p-3">
-          {pendingTableOrders.length > 0 && (
+          {pendingOrders.length > 0 && (
             <div className="shrink-0 rounded-xl border border-border bg-card overflow-hidden">
               <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted/50">
                 <UtensilsCrossed className="h-4 w-4 text-primary" />
                 <span className="text-sm font-semibold text-card-foreground">Order from Tablet</span>
                 <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded bg-primary px-1 text-xs font-bold text-primary-foreground">
-                  {pendingTableOrders.length}
+                  {pendingOrders.length}
                 </span>
               </div>
               <ScrollArea className="max-h-[180px]">
                 <div className="p-2 space-y-1">
-                  {pendingTableOrders.map((o) => (
+                  {pendingOrders.map((o) => (
                     <button
                       key={o.id}
                       type="button"
@@ -373,6 +408,7 @@ export function PosTerminalView({
         }}
         order={tableOrderModalOrder}
         formatCurrency={formatCurrency}
+        onCompleted={refreshPendingOrders}
       />
     </div>
   )

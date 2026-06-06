@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { PwaProvider } from '@/components/pwa/pwa-provider'
 import { AuthProvider } from '@/lib/auth-context'
 import { Toaster } from '@/components/ui/sonner'
+import { RadixPortalCleanup } from '@/components/radix-portal-cleanup'
 
 import './globals.css'
 
@@ -55,6 +56,7 @@ export default function RootLayout({
           <SessionProvider>
             <AuthProvider>
               <PwaProvider>
+                <RadixPortalCleanup />
                 {children}
                 <Toaster position="bottom-right" richColors />
               </PwaProvider>

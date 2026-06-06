@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Monitor, MapPin, Store, User, Percent, Check, ChevronDown } from "lucide-react"
 import { getCategoryIcon } from "@/lib/category-icons"
-import { cn } from "@/lib/utils"
+import { cn, toTitleCase } from "@/lib/utils"
 import type { ActionResult } from "@/app/actions/terminals"
 
 interface CategoryTree {
@@ -182,6 +182,7 @@ export function CreateTerminalModal({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
+      {open ? (
       <DialogContent className="sm:max-w-md bg-card border-border max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-card-foreground">
@@ -330,7 +331,7 @@ export function CreateTerminalModal({
                       )}
                     >
                       <RootIcon className="h-4 w-4 shrink-0" />
-                      <span className="flex-1">{root.name}</span>
+                      <span className="flex-1">{toTitleCase(root.name)}</span>
                       {isSelected && <Check className="h-4 w-4 shrink-0" />}
                     </button>
                   )
@@ -358,7 +359,7 @@ export function CreateTerminalModal({
                       )}
                     >
                       <RootIcon className="h-4 w-4 shrink-0" />
-                      <span className="flex-1">{root.name}</span>
+                      <span className="flex-1">{toTitleCase(root.name)}</span>
                       {allSelected && <Check className="h-4 w-4 shrink-0" />}
                       {!allSelected && someSelected && (
                         <div className="h-4 w-4 shrink-0 rounded-sm border-2 border-primary bg-primary/20" />
@@ -383,7 +384,7 @@ export function CreateTerminalModal({
                             )}
                           >
                             <ChildIcon className="h-3.5 w-3.5 shrink-0" />
-                            <span className="flex-1">{child.name}</span>
+                            <span className="flex-1">{toTitleCase(child.name)}</span>
                             {isChildSelected && <Check className="h-3.5 w-3.5 shrink-0" />}
                           </button>
                         )
@@ -419,6 +420,7 @@ export function CreateTerminalModal({
           </div>
         </form>
       </DialogContent>
+      ) : null}
     </Dialog>
   )
 }

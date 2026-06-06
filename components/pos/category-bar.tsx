@@ -113,7 +113,7 @@ export function CategoryBar({ activeCategory, onCategoryChange, allowedCategorie
                 : "border-border bg-card text-muted-foreground hover:text-foreground hover:border-border/80"
             )}
           >
-            All {selectedParent!.name}
+            All {toTitleCase(selectedParent!.name)}
           </button>
 
           {childrenToShow.map((child) => {

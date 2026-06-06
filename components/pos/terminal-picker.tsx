@@ -5,7 +5,7 @@ import { signOut } from "next-auth/react"
 import { Monitor, MapPin, LogOut } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { cn, toTitleCase } from "@/lib/utils"
 
 interface TerminalInfo {
   id: string
@@ -121,11 +121,11 @@ export function TerminalPicker({ userName, terminals }: TerminalPickerProps) {
 
                 <div>
                   <h3 className="text-lg font-semibold text-card-foreground group-hover:text-primary transition-colors">
-                    {terminal.name}
+                    {toTitleCase(terminal.name)}
                   </h3>
                   <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
                     <MapPin className="h-3.5 w-3.5" />
-                    {terminal.location}
+                    {toTitleCase(terminal.location)}
                   </p>
                 </div>
 

@@ -23,6 +23,12 @@ export const tenantRepository = {
   findById: (id: string) => prisma.tenant.findUnique({ where: { id } }),
   findBySlug: (slug: string) => prisma.tenant.findUnique({ where: { slug } }),
 
+  findAll: () =>
+    prisma.tenant.findMany({
+      select: { slug: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+
   isSlugAvailable(slug: string): boolean {
     if (!slug || slug.length < 3) return false
     if (RESERVED_SLUGS.includes(slug.toLowerCase())) return false

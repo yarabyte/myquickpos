@@ -10,13 +10,11 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { CreditCard, Banknote, Smartphone, Loader2 } from "lucide-react"
+import { Banknote, Smartphone, Loader2 } from "lucide-react"
 import { completeTableOrder } from "@/app/actions/table-orders"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { toast } from "sonner"
-import { toTitleCase } from "@/lib/utils"
 
 export interface PendingTableOrder {
   id: string
@@ -39,10 +37,10 @@ interface TableOrderPaymentModalProps {
   onClose: () => void
   order: PendingTableOrder | null
   formatCurrency: (amount: number) => string
+  onCompleted?: () => void
 }
 
 const paymentOptions = [
-  { id: "Card", label: "Carte", icon: CreditCard },
   { id: "Cash", label: "Espèces", icon: Banknote },
   { id: "MTN Money", label: "MTN Money", icon: Smartphone },
   { id: "Orange Money", label: "Orange Money", icon: Smartphone },
@@ -53,32 +51,47 @@ export function TableOrderPaymentModal({
   onClose,
   order,
   formatCurrency,
+  onCompleted,
 }: TableOrderPaymentModalProps) {
   const router = useRouter()
   const { data: session } = useSession()
   const currentUserName = (session?.user as { name?: string } | undefined)?.name ?? ""
-  const [paymentMethod, setPaymentMethod] = useState("Card")
-  const [cashierName, setCashierName] = useState("")
+  const [paymentMethod, setPaymentMethod] = useState("Cash")
+  const [cashReceived, setCashReceived] = useState("")
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    if (open && currentUserName) {
-      setCashierName(currentUserName)
+    if (open) {
+      setPaymentMethod("Cash")
+      setCashReceived("")
     }
-  }, [open, currentUserName])
+  }, [open, order?.id])
+
+  const total = order?.total ?? 0
+  const receivedAmount = parseFloat(cashReceived) || 0
+  const changeDue = receivedAmount - total
+  const isCash = paymentMethod === "Cash"
+  const canSubmit = !isCash || receivedAmount >= total
 
   const handleComplete = async () => {
     if (!order) return
+    if (isCash && receivedAmount < total) {
+      toast.error("Montant insuffisant", {
+        description: "Le montant perçu doit être au moins égal au total.",
+      })
+      return
+    }
     setSubmitting(true)
     const result = await completeTableOrder({
       orderId: order.id,
       paymentMethod,
-      cashierName: cashierName.trim() || null,
+      cashierName: currentUserName.trim() || null,
     })
     setSubmitting(false)
     if (result.success) {
       toast.success("Commande réglée", { description: `${order.orderNumber} enregistrée.` })
       onClose()
+      onCompleted?.()
       router.refresh()
     } else {
       toast.error(result.error)
@@ -106,21 +119,6 @@ export function TableOrderPaymentModal({
                 })}
               </p>
             </div>
-            <ScrollArea className="max-h-[200px] rounded-md border p-3">
-              <div className="space-y-2">
-                {order.items.map((item) => (
-                  <div
-                    key={`${item.productId}-${item.quantity}`}
-                    className="flex justify-between text-sm"
-                  >
-                    <span className="text-muted-foreground">
-                      {item.quantity}× {toTitleCase(item.product.name)}
-                    </span>
-                    <span className="font-mono">{formatCurrency(item.total)}</span>
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
             <div className="flex justify-between text-base font-semibold">
               <span>Total</span>
               <span className="font-mono">{formatCurrency(order.total)}</span>
@@ -130,37 +128,85 @@ export function TableOrderPaymentModal({
               <label className="text-sm font-medium text-muted-foreground">
                 Mode de paiement
               </label>
-              <div className="flex flex-wrap gap-2">
-                {paymentOptions.map((opt) => (
-                  <Button
-                    key={opt.id}
-                    type="button"
-                    variant={paymentMethod === opt.id ? "default" : "outline"}
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => setPaymentMethod(opt.id)}
-                  >
-                    <opt.icon className="mr-1.5 h-4 w-4" />
-                    {opt.label}
-                  </Button>
-                ))}
+              <div className="space-y-2">
+                {paymentOptions
+                  .filter((opt) => opt.id === "Cash")
+                  .map((opt) => (
+                    <Button
+                      key={opt.id}
+                      type="button"
+                      variant={paymentMethod === opt.id ? "default" : "outline"}
+                      size="sm"
+                      className="w-full h-11"
+                      onClick={() => {
+                        setPaymentMethod(opt.id)
+                        if (opt.id !== "Cash") setCashReceived("")
+                      }}
+                    >
+                      <opt.icon className="mr-1.5 h-4 w-4" />
+                      {opt.label}
+                    </Button>
+                  ))}
+                <div className="grid grid-cols-2 gap-2">
+                  {paymentOptions
+                    .filter((opt) => opt.id !== "Cash")
+                    .map((opt) => (
+                      <Button
+                        key={opt.id}
+                        type="button"
+                        variant={paymentMethod === opt.id ? "default" : "outline"}
+                        size="sm"
+                        className="w-full"
+                        onClick={() => {
+                          setPaymentMethod(opt.id)
+                          if (opt.id !== "Cash") setCashReceived("")
+                        }}
+                      >
+                        <opt.icon className="mr-1.5 h-4 w-4" />
+                        {opt.label}
+                      </Button>
+                    ))}
+                </div>
               </div>
             </div>
-            <div className="space-y-2">
-              <label htmlFor="table-order-cashier" className="text-sm font-medium text-muted-foreground">
-                Caissier
-              </label>
-              <Input
-                id="table-order-cashier"
-                value={cashierName}
-                readOnly
-                className="h-9 bg-muted"
-              />
-            </div>
+
+            {isCash && (
+              <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-3">
+                <div className="space-y-1.5">
+                  <label htmlFor="cash-received" className="text-sm font-medium text-muted-foreground">
+                    Montant perçu
+                  </label>
+                  <Input
+                    id="cash-received"
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={cashReceived}
+                    onChange={(e) => setCashReceived(e.target.value)}
+                    placeholder="0"
+                    className="h-11 text-center text-lg font-bold font-mono"
+                  />
+                </div>
+                {receivedAmount >= total && (
+                  <div className="rounded-lg bg-primary/10 px-3 py-2.5 text-center">
+                    <p className="text-xs text-muted-foreground">Reste à remettre au client</p>
+                    <p className="text-xl font-bold text-primary font-mono">
+                      {formatCurrency(changeDue)}
+                    </p>
+                  </div>
+                )}
+                {cashReceived && receivedAmount < total && (
+                  <p className="text-xs text-destructive text-center">
+                    Montant insuffisant (manque {formatCurrency(total - receivedAmount)})
+                  </p>
+                )}
+              </div>
+            )}
+
             <Button
               className="w-full"
               onClick={handleComplete}
-              disabled={submitting}
+              disabled={submitting || !canSubmit}
             >
               {submitting ? (
                 <>

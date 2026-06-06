@@ -50,6 +50,213 @@ const submitEstablishmentOrderSchema = z.object({
 
 export type ActionResult<T = unknown> = { success: true; data: T } | { success: false; error: string }
 
+export type EstablishmentOrderSummary = {
+  id: string
+  orderNumber: string
+  orderLabel: string | null
+  status: "PENDING" | "COMPLETED" | "CANCELLED" | "REFUNDED"
+  subtotal: number
+  tax: number
+  total: number
+  createdAt: string
+  items: {
+    id: string
+    productId: string
+    productName: string
+    quantity: number
+    unitPrice: number
+    total: number
+  }[]
+}
+
+const orderItemsSchema = z
+  .array(
+    z.object({
+      productId: z.string(),
+      quantity: z.number().int().positive(),
+      unitPrice: z.number().positive(),
+      total: z.number().min(0),
+    })
+  )
+  .min(1, "At least one item required")
+
+async function resolveEstablishment(establishmentSlug: string) {
+  const resolved = await establishmentRepository.findBySlugPublic(establishmentSlug)
+  if (!resolved) return null
+  return resolved
+}
+
+function mapOrderSummary(order: Awaited<ReturnType<typeof orderRepository.findTabletOrdersByTerminal>>[number]): EstablishmentOrderSummary {
+  return {
+    id: order.id,
+    orderNumber: order.orderNumber,
+    orderLabel: order.orderLabel,
+    status: order.status,
+    subtotal: Number(order.subtotal),
+    tax: Number(order.tax),
+    total: Number(order.total),
+    createdAt: order.createdAt.toISOString(),
+    items: order.items.map((item) => ({
+      id: item.id,
+      productId: item.productId,
+      productName: item.product.name,
+      quantity: item.quantity,
+      unitPrice: Number(item.unitPrice),
+      total: Number(item.total),
+    })),
+  }
+}
+
+const getEstablishmentOrdersSchema = z.object({
+  establishmentSlug: z.string().min(1),
+  from: z.string().datetime().optional(),
+  to: z.string().datetime().optional(),
+})
+
+/** List tablet orders sent to POS for an establishment (public, no auth). */
+export async function getEstablishmentOrders(
+  input: z.infer<typeof getEstablishmentOrdersSchema>
+): Promise<ActionResult<EstablishmentOrderSummary[]>> {
+  try {
+    const parsed = getEstablishmentOrdersSchema.safeParse(input)
+    if (!parsed.success) {
+      return { success: false, error: parsed.error.errors.map((e) => e.message).join(", ") }
+    }
+
+    const resolved = await resolveEstablishment(parsed.data.establishmentSlug)
+    if (!resolved) {
+      return { success: false, error: "Establishment not found" }
+    }
+
+    const orders = await orderRepository.findTabletOrdersByTerminal(
+      resolved.tenantId,
+      resolved.terminal.id,
+      {
+        from: parsed.data.from ? new Date(parsed.data.from) : undefined,
+        to: parsed.data.to ? new Date(parsed.data.to) : undefined,
+      }
+    )
+
+    return { success: true, data: orders.map(mapOrderSummary) }
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : "Failed to load orders" }
+  }
+}
+
+export type PendingTableOrderDto = {
+  id: string
+  orderNumber: string
+  orderLabel: string | null
+  total: number
+  createdAt: string
+  table: { id: string; name: string; slug: string } | null
+  items: {
+    productId: string
+    quantity: number
+    unitPrice: number
+    total: number
+    product: { name: string }
+  }[]
+}
+
+function mapPendingTableOrder(
+  o: Awaited<ReturnType<typeof orderRepository.findMany>>[number]
+): PendingTableOrderDto {
+  return {
+    id: o.id,
+    orderNumber: o.orderNumber,
+    orderLabel: o.orderLabel ?? null,
+    total: Number(o.total),
+    createdAt: o.createdAt.toISOString(),
+    table: o.table ? { id: o.table.id, name: o.table.name, slug: o.table.slug } : null,
+    items: o.items.map((i) => ({
+      productId: i.productId,
+      quantity: i.quantity,
+      unitPrice: Number(i.unitPrice),
+      total: Number(i.total),
+      product: i.product ? { name: i.product.name } : { name: "—" },
+    })),
+  }
+}
+
+/** Pending tablet orders for POS terminal (authenticated, for polling refresh). */
+export async function getPendingTableOrders(
+  terminalId: string
+): Promise<ActionResult<PendingTableOrderDto[]>> {
+  try {
+    const tenantId = await requireTenantId()
+    const terminal = await terminalRepository.findById(terminalId, tenantId)
+    if (!terminal) {
+      return { success: false, error: "Terminal not found" }
+    }
+
+    const pendingOrders = await orderRepository.findMany(tenantId, {
+      terminalId,
+      status: "PENDING",
+      take: 50,
+    })
+
+    return { success: true, data: pendingOrders.map(mapPendingTableOrder) }
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : "Failed to load pending orders" }
+  }
+}
+
+const updatePendingEstablishmentOrderSchema = z.object({
+  establishmentSlug: z.string().min(1),
+  orderId: z.string().min(1),
+  items: orderItemsSchema,
+  subtotal: z.number().min(0),
+  tax: z.number().min(0),
+  discount: z.number().min(0).optional().default(0),
+  orderLabel: z.string().min(1, "Nom de la table ou du client requis"),
+})
+
+/** Update a PENDING tablet order (public, scoped to establishment terminal). */
+export async function updatePendingEstablishmentOrder(
+  data: z.infer<typeof updatePendingEstablishmentOrderSchema>
+): Promise<ActionResult<{ orderId: string; orderNumber: string }>> {
+  try {
+    const parsed = updatePendingEstablishmentOrderSchema.safeParse(data)
+    if (!parsed.success) {
+      return { success: false, error: parsed.error.errors.map((e) => e.message).join(", ") }
+    }
+
+    const resolved = await resolveEstablishment(parsed.data.establishmentSlug)
+    if (!resolved) {
+      return { success: false, error: "Establishment not found" }
+    }
+
+    const existing = await orderRepository.findById(parsed.data.orderId, resolved.tenantId)
+    if (!existing) return { success: false, error: "Order not found" }
+    if (existing.terminalId !== resolved.terminal.id) {
+      return { success: false, error: "Order does not belong to this establishment" }
+    }
+    if (existing.status !== "PENDING") {
+      return { success: false, error: "Seules les commandes en attente peuvent être modifiées" }
+    }
+
+    const total = parsed.data.subtotal + parsed.data.tax - (parsed.data.discount ?? 0)
+
+    const order = await orderRepository.updatePendingOrder(parsed.data.orderId, resolved.tenantId, {
+      orderLabel: parsed.data.orderLabel.trim(),
+      subtotal: parsed.data.subtotal,
+      tax: parsed.data.tax,
+      discount: parsed.data.discount ?? 0,
+      total,
+      items: parsed.data.items,
+    })
+
+    revalidatePath(`/pos/${resolved.terminal.id}`)
+    revalidatePath("/admin/tablet")
+    revalidatePath(`/restaurant/${parsed.data.establishmentSlug}`)
+
+    return { success: true, data: { orderId: order.id, orderNumber: order.orderNumber } }
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : "Failed to update order" }
+  }
+}
+
 /** Submit order from tablet (no auth). Creates Order with status PENDING, no stock movement. */
 export async function submitTableOrder(
   data: z.infer<typeof submitTableOrderSchema>
@@ -136,6 +343,7 @@ export async function submitEstablishmentOrder(
 
     revalidatePath(`/pos/${terminal.id}`)
     revalidatePath("/admin/tablet")
+    revalidatePath(`/restaurant/${parsed.data.establishmentSlug}`)
 
     return { success: true, data: { orderId: order.id, orderNumber: order.orderNumber } }
   } catch (e) {

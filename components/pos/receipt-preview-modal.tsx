@@ -69,8 +69,6 @@ export function ReceiptPreviewModal({
   })
   const orderNo = "#" + String(Math.floor(Math.random() * 9000) + 1000)
 
-  const paperWidthPx = config.paperWidth === "58mm" ? 220 : 300
-
   useEffect(() => {
     if (open) {
       setPrinting(false)
@@ -118,16 +116,13 @@ export function ReceiptPreviewModal({
           {/* Ticket thermal format pro : 58mm / 80mm, mise en page soignée */}
           <div
             ref={receiptRef}
+            data-paper-width={config.paperWidth}
             className={cn(
               "bg-white text-black shadow-lg relative receipt-thermal-pro",
               "font-mono leading-snug",
               config.paperWidth === "58mm" ? "text-[10px]" : "text-[11px]",
               printing && "animate-receipt-print"
             )}
-            style={{
-              width: paperWidthPx,
-              padding: config.paperWidth === "58mm" ? "14px 10px" : "18px 16px",
-            }}
           >
             {/* En-tête commerce */}
             {config.headerHtml && (
@@ -150,18 +145,18 @@ export function ReceiptPreviewModal({
             <div className="border-t border-dashed border-gray-500 my-2" />
 
             {/* Colonnes articles */}
-            <div className="flex justify-between font-bold uppercase tracking-wide text-[0.9em] mb-1 text-gray-700">
-              <span className="flex-1 min-w-0">Article</span>
-              <span className="w-6 text-center shrink-0">Qté</span>
-              <span className="w-12 text-right shrink-0">Montant</span>
+            <div className="receipt-line font-bold uppercase tracking-wide text-[0.9em] mb-1 text-gray-700">
+              <span className="receipt-col-name">Article</span>
+              <span className="receipt-col-qty">Qté</span>
+              <span className="receipt-col-amount">Montant</span>
             </div>
 
             <div className="space-y-0.5 mb-2">
               {cart.map((item) => (
-                <div key={item.product.id} className="flex justify-between gap-1">
-                  <span className="flex-1 min-w-0 truncate">{toTitleCase(item.product.name)}</span>
-                  <span className="w-6 text-center shrink-0">{item.quantity}</span>
-                  <span className="w-12 text-right shrink-0">
+                <div key={item.product.id} className="receipt-line">
+                  <span className="receipt-col-name">{toTitleCase(item.product.name)}</span>
+                  <span className="receipt-col-qty">{item.quantity}</span>
+                  <span className="receipt-col-amount">
                     {formatCurrency(item.product.price * item.quantity)}
                   </span>
                 </div>
@@ -178,23 +173,23 @@ export function ReceiptPreviewModal({
 
             {/* Totaux */}
             <div className="space-y-0.5 text-[0.95em]">
-              <div className="flex justify-between">
+              <div className="receipt-row">
                 <span>Sous-total ({itemCount} art.)</span>
                 <span>{formatCurrency(subtotal)}</span>
               </div>
               {(taxRate ?? 0) > 0 ? (
-                <div className="flex justify-between text-gray-700">
+                <div className="receipt-row text-gray-700">
                   <span>TVA ({taxRate}%)</span>
                   <span>{formatCurrency(tax)}</span>
                 </div>
               ) : (
-                <div className="flex justify-between text-gray-600">
+                <div className="receipt-row text-gray-600">
                   <span>TVA</span>
                   <span>—</span>
                 </div>
               )}
               <div className="border-t-2 border-black my-1.5" />
-              <div className="flex justify-between font-bold text-[1.05em]">
+              <div className="receipt-row font-bold text-[1.05em]">
                 <span>TOTAL</span>
                 <span>{formatCurrency(total)}</span>
               </div>
@@ -202,7 +197,7 @@ export function ReceiptPreviewModal({
 
             <div className="border-t border-dashed border-gray-500 my-2" />
 
-            <div className="flex justify-between text-[0.95em]">
+            <div className="receipt-row text-[0.95em]">
               <span className="text-gray-700">Paiement</span>
               <span className="font-semibold">{paymentMethod}</span>
             </div>

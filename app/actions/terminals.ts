@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { requireTenantId } from "@/lib/auth"
 import { terminalRepository } from "@/lib/repositories/terminal.repository"
+import { toTitleCase } from "@/lib/utils"
 
 const createTerminalSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -42,8 +43,8 @@ export async function createTerminal(formData: FormData): Promise<ActionResult> 
     }
     const terminal = await terminalRepository.create(
       {
-        name: parsed.data.name,
-        label: parsed.data.label,
+        name: toTitleCase(parsed.data.name),
+        label: toTitleCase(parsed.data.label),
         storeId: parsed.data.storeId ?? undefined,
         settings: {
           taxRate: parsed.data.taxRate,
@@ -70,8 +71,8 @@ export async function updateTerminal(id: string, formData: FormData): Promise<Ac
       return { success: false, error: parsed.error.errors.map((e) => e.message).join(", ") }
     }
     const updateData: Parameters<typeof terminalRepository.update>[1] = {}
-    if (parsed.data.name !== undefined) updateData.name = parsed.data.name
-    if (parsed.data.label !== undefined) updateData.label = parsed.data.label
+    if (parsed.data.name !== undefined) updateData.name = toTitleCase(parsed.data.name)
+    if (parsed.data.label !== undefined) updateData.label = toTitleCase(parsed.data.label)
     if (parsed.data.storeId !== undefined) updateData.storeId = parsed.data.storeId
     if (parsed.data.isActive !== undefined) updateData.isActive = parsed.data.isActive
     if (parsed.data.taxRate !== undefined || parsed.data.assignedCategories !== undefined || parsed.data.cashier !== undefined) {

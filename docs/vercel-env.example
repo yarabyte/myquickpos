@@ -1,0 +1,42 @@
+# Variables d'environnement — production (Vercel)
+
+Copiez ces variables dans **Vercel → Project → Settings → Environment Variables**.
+
+## Obligatoires
+
+| Variable | Exemple | Notes |
+|----------|---------|-------|
+| `DATABASE_URL` | `postgresql://postgres.[ref]:[pwd]@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true&sslmode=require` | **Pooler** port 6543 — runtime app |
+| `DIRECT_URL` | `postgresql://postgres.[ref]:[pwd]@aws-0-eu-west-1.pooler.supabase.com:5432/postgres?sslmode=require` | Connexion directe — migrations CLI |
+| `AUTH_SECRET` | généré avec `openssl rand -base64 32` | Secret session NextAuth (min. 32 car.) |
+
+## Recommandées
+
+| Variable | Exemple | Notes |
+|----------|---------|-------|
+| `AUTH_URL` | `https://myquickpos.vercel.app` | URL publique de l'app (Production) |
+| `NEXTAUTH_URL` | `https://myquickpos.vercel.app` | Alias legacy, même valeur que `AUTH_URL` |
+| `AUTH_TRUST_HOST` | `true` | Proxy Vercel (déjà géré si `trustHost` dans auth.ts) |
+
+## Par environnement Vercel
+
+- **Production** : domaine final (`https://votre-domaine.com`)
+- **Preview** : optionnel — Auth.js détecte l'hôte automatiquement avec `trustHost: true`
+
+## Supabase — important
+
+- `DATABASE_URL` → port **6543** + `pgbouncer=true` (serverless Vercel)
+- `DIRECT_URL` → port **5432** (imports, Prisma Studio en local)
+- Mot de passe URL-encodé si caractères spéciaux (`@` → `%40`, `!` → `%21`)
+
+## Générer AUTH_SECRET
+
+```bash
+openssl rand -base64 32
+```
+
+## Vérification post-déploiement
+
+1. Ouvrir `https://votre-app.vercel.app/login`
+2. Se connecter (tenant `emilemicheline`, utilisateur existant)
+3. Tester `/pos` et `/admin`

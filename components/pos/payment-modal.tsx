@@ -11,11 +11,9 @@ import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
-  CreditCard,
   Banknote,
   Smartphone,
   CheckCircle2,
-  ArrowLeft,
   Receipt,
   Star,
   User,
@@ -53,35 +51,30 @@ interface PaymentModalProps {
   printerConfig?: ReceiptPrinterConfig
 }
 
-type PaymentMethod = "card" | "cash" | "mtn" | "orange" | null
+type PaymentMethod = "cash" | "mtn" | "orange" | null
 type PaymentStep = "customer" | "method" | "processing" | "complete"
 
 const paymentMethods = [
   {
-    id: "card" as const,
-    label: "Card",
-    icon: CreditCard,
-    description: "Credit or Debit",
-  },
-  {
     id: "cash" as const,
-    label: "Cash",
+    label: "Espèces",
     icon: Banknote,
-    description: "Exact or Change",
+    description: "Montant et monnaie",
   },
   {
     id: "mtn" as const,
     label: "MTN Money",
     icon: Smartphone,
-    description: "Mobile money",
   },
   {
     id: "orange" as const,
     label: "Orange Money",
     icon: Smartphone,
-    description: "Mobile money",
   },
 ]
+
+const cashPaymentMethod = paymentMethods.find((pm) => pm.id === "cash")!
+const mobilePaymentMethods = paymentMethods.filter((pm) => pm.id !== "cash")
 
 const defaultCustomers: CustomerOption[] = []
 
@@ -100,7 +93,7 @@ export function PaymentModal({
   onPaymentComplete,
   printerConfig,
 }: PaymentModalProps) {
-  const [method, setMethod] = useState<PaymentMethod>(null)
+  const [method, setMethod] = useState<PaymentMethod>("cash")
   const [step, setStep] = useState<PaymentStep>("customer")
   const [cashAmount, setCashAmount] = useState("")
   const [showReceipt, setShowReceipt] = useState(false)
@@ -110,7 +103,8 @@ export function PaymentModal({
 
   useEffect(() => {
     if (open) {
-      // Calculate points to be earned (1 point per dollar)
+      setMethod("cash")
+      setCashAmount("")
       const points = Math.floor(total)
       setEarnedPoints(points)
     }
@@ -124,25 +118,32 @@ export function PaymentModal({
 
   const handleSelectCustomer = (customer: CustomerOption) => {
     setSelectedCustomer(customer)
+    setMethod("cash")
     setStep("method")
   }
 
   const handleSkipCustomer = () => {
     setSelectedCustomer(null)
+    setMethod("cash")
     setStep("method")
   }
 
-  const handleSelectMethod = async (m: PaymentMethod) => {
+  const handleSelectMethod = (m: PaymentMethod) => {
+    if (!m) return
     setMethod(m)
-    if (m === "cash") return
+    if (m !== "cash") setCashAmount("")
+  }
+
+  const handleMobilePayment = async () => {
+    if (method !== "mtn" && method !== "orange") return
     setStep("processing")
     try {
       await onConfirmPayment({
         customerId: selectedCustomer?.id ?? null,
-        paymentMethod: m === "card" ? "Card" : m === "mtn" ? "MTN Money" : "Orange Money",
+        paymentMethod: method === "mtn" ? "MTN Money" : "Orange Money",
       })
       setStep("complete")
-    } catch (err) {
+    } catch {
       setStep("method")
     }
   }
@@ -161,7 +162,7 @@ export function PaymentModal({
   }
 
   const handleDone = () => {
-    setMethod(null)
+    setMethod("cash")
     setStep("customer")
     setCashAmount("")
     setSelectedCustomer(null)
@@ -170,7 +171,7 @@ export function PaymentModal({
   }
 
   const handleClose = () => {
-    setMethod(null)
+    setMethod("cash")
     setStep("customer")
     setCashAmount("")
     setSelectedCustomer(null)
@@ -191,15 +192,8 @@ export function PaymentModal({
   const cashValue = parseFloat(cashAmount) || 0
   const changeDue = cashValue - total
 
-  const quickCashAmounts = [
-    Math.ceil(total),
-    Math.ceil(total / 5) * 5,
-    Math.ceil(total / 10) * 10,
-    Math.ceil(total / 20) * 20,
-  ].filter((v, i, arr) => arr.indexOf(v) === i && v >= total)
-
   const methodLabel =
-    method === "card" ? "Card" : method === "cash" ? "Cash" : method === "mtn" ? "MTN Money" : "Orange Money"
+    method === "cash" ? "Espèces" : method === "mtn" ? "MTN Money" : "Orange Money"
 
   const getTierColor = (tier: string) => {
     switch (tier) {
@@ -210,6 +204,16 @@ export function PaymentModal({
       default: return "text-muted-foreground bg-muted"
     }
   }
+
+  const CashIcon = cashPaymentMethod.icon
+
+  const methodButtonClass = (id: PaymentMethod) =>
+    cn(
+      "flex flex-col items-center gap-2 rounded-xl border p-5 transition-all active:scale-[0.97] touch-manipulation select-none",
+      method === id
+        ? "border-primary bg-primary/10"
+        : "border-border hover:border-primary/40 hover:bg-secondary/50"
+    )
 
   return (
     <>
@@ -323,7 +327,7 @@ export function PaymentModal({
             </div>
           )}
 
-          {step === "method" && !method && (
+          {step === "method" && (
             <div className="space-y-5">
               <div className="text-center">
                 <p className="text-sm text-muted-foreground">Total Amount</p>
@@ -334,97 +338,92 @@ export function PaymentModal({
 
               <Separator />
 
-              <div className="grid grid-cols-2 gap-3">
-                {paymentMethods.map((pm) => {
-                  const Icon = pm.icon
-                  return (
-                    <button
-                      key={pm.id}
-                      onClick={() => handleSelectMethod(pm.id)}
-                      className="flex flex-col items-center gap-2 rounded-xl border border-border p-5 transition-all hover:border-primary/40 hover:bg-secondary/50 active:scale-[0.97] touch-manipulation select-none"
-                    >
-                      <Icon className="h-8 w-8 text-primary" />
-                      <span className="text-sm font-semibold">{pm.label}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {pm.description}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {step === "method" && method === "cash" && (
-            <div className="space-y-5">
-              <button
-                onClick={() => setMethod(null)}
-                className="flex items-center gap-1 text-sm text-muted-foreground hover:text-card-foreground transition-colors touch-manipulation"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back
-              </button>
-
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground">Amount Due</p>
-                <p className="text-3xl font-bold text-primary font-mono mt-1">
-                  {formatCurrency(total)}
-                </p>
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  onClick={() => handleSelectMethod("cash")}
+                  className={cn(methodButtonClass("cash"), "w-full")}
+                >
+                  <CashIcon className="h-8 w-8 text-primary" />
+                  <span className="text-sm font-semibold">{cashPaymentMethod.label}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {cashPaymentMethod.description}
+                  </span>
+                </button>
+                <div className="grid grid-cols-2 gap-3">
+                  {mobilePaymentMethods.map((pm) => {
+                    const Icon = pm.icon
+                    return (
+                      <button
+                        key={pm.id}
+                        type="button"
+                        onClick={() => handleSelectMethod(pm.id)}
+                        className={methodButtonClass(pm.id)}
+                      >
+                        <Icon className="h-8 w-8 text-primary" />
+                        <span className="text-sm font-semibold">{pm.label}</span>
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
 
-              <Separator />
+              {method === "cash" && (
+                <>
+                  <Separator />
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                      Montant perçu
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={cashAmount}
+                      onChange={(e) => setCashAmount(e.target.value)}
+                      placeholder="0"
+                      className="w-full rounded-xl border border-border bg-secondary px-4 py-4 text-center text-2xl font-bold font-mono text-card-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
 
-              <div>
-                <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                  Cash Received
-                </label>
-                <input
-                  type="number"
-                  value={cashAmount}
-                  onChange={(e) => setCashAmount(e.target.value)}
-                  placeholder="0.00"
-                  className="w-full rounded-xl border border-border bg-secondary px-4 py-4 text-center text-2xl font-bold font-mono text-card-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
+                  {cashValue >= total && (
+                    <div className="rounded-xl bg-primary/10 p-3 text-center">
+                      <p className="text-sm text-muted-foreground">Reste à remettre au client</p>
+                      <p className="text-2xl font-bold text-primary font-mono">
+                        {formatCurrency(changeDue)}
+                      </p>
+                    </div>
+                  )}
 
-              <div className="flex flex-wrap gap-2">
-                {quickCashAmounts.map((amount) => (
+                  {cashAmount && cashValue < total && (
+                    <p className="text-xs text-destructive text-center">
+                      Montant insuffisant (manque {formatCurrency(total - cashValue)})
+                    </p>
+                  )}
+
                   <button
-                    key={amount}
-                    onClick={() => setCashAmount(amount.toFixed(2))}
+                    onClick={handleCashPayment}
+                    disabled={cashValue < total}
                     className={cn(
-                      "rounded-lg border border-border px-4 py-2.5 text-sm font-semibold font-mono transition-all touch-manipulation select-none",
-                      cashValue === amount
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "bg-secondary text-secondary-foreground hover:border-primary/40"
+                      "flex w-full items-center justify-center gap-2 rounded-xl py-4 text-base font-bold transition-all touch-manipulation select-none",
+                      cashValue >= total
+                        ? "bg-primary text-primary-foreground hover:bg-primary/90 active:scale-[0.98]"
+                        : "bg-muted text-muted-foreground cursor-not-allowed"
                     )}
                   >
-                    {formatCurrency(amount)}
+                    Régler
                   </button>
-                ))}
-              </div>
-
-              {cashValue >= total && (
-                <div className="rounded-xl bg-primary/10 p-3 text-center">
-                  <p className="text-sm text-muted-foreground">Change Due</p>
-                  <p className="text-2xl font-bold text-primary font-mono">
-                    {formatCurrency(changeDue)}
-                  </p>
-                </div>
+                </>
               )}
 
-              <button
-                onClick={handleCashPayment}
-                disabled={cashValue < total}
-                className={cn(
-                  "flex w-full items-center justify-center gap-2 rounded-xl py-4 text-base font-bold transition-all touch-manipulation select-none",
-                  cashValue >= total
-                    ? "bg-primary text-primary-foreground hover:bg-primary/90 active:scale-[0.98]"
-                    : "bg-muted text-muted-foreground cursor-not-allowed"
-                )}
-              >
-                Complete Payment
-              </button>
+              {(method === "mtn" || method === "orange") && (
+                <button
+                  onClick={handleMobilePayment}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 text-base font-bold text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98] touch-manipulation select-none"
+                >
+                  Régler via {methodLabel}
+                </button>
+              )}
             </div>
           )}
 
@@ -451,7 +450,7 @@ export function PaymentModal({
                 </p>
                 {method === "cash" && changeDue > 0 && (
                   <p className="text-sm font-semibold text-primary mt-1 font-mono">
-                    Change: {formatCurrency(changeDue)}
+                    Monnaie : {formatCurrency(changeDue)}
                   </p>
                 )}
               </div>
