@@ -410,6 +410,8 @@ export function PosTerminalView({
         completedOrderCart={lastCart}
         taxRate={taxRate}
         formatCurrency={formatCurrency}
+        formatAmount={formatAmount}
+        currency={currency}
         terminalName={terminalName}
         cashierName={cashierName}
         customers={customers}
@@ -425,6 +427,8 @@ export function PosTerminalView({
         cart={lastCart}
         taxRate={taxRate}
         formatCurrency={formatCurrency}
+        formatAmount={formatAmount}
+        currency={currency}
         paymentMethod={lastPaymentMethod}
         terminalName={terminalName}
         cashierName={cashierName}

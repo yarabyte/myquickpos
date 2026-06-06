@@ -36,12 +36,14 @@ const RECEIPT_PRINT_STYLES = `
   .receipt-preview img { max-width: 60%; height: auto; margin: 0.2em auto; display: block; }
   .receipt-line {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    gap: 0.15em 0.5em;
+    grid-template-columns: minmax(0, 1fr) 2.5em auto;
+    gap: 0.1em 0.35em;
     align-items: baseline;
   }
-  .receipt-line .receipt-col-qty { text-align: center; white-space: nowrap; }
-  .receipt-line .receipt-col-amount { text-align: right; white-space: nowrap; }
+  .receipt-line .receipt-col-qty { text-align: center; white-space: nowrap; width: 2.5em; }
+  .receipt-line .receipt-col-amount { text-align: right; white-space: nowrap; min-width: 3.5em; }
+  .receipt-order-meta { text-align: center; margin: 0.15em 0 0.25em; line-height: 1.2; }
+  .receipt-order-meta p { margin: 0; padding: 0; line-height: 1.2; }
   .receipt-row {
     display: flex;
     justify-content: space-between;

@@ -43,6 +43,8 @@ interface PaymentModalProps {
   completedOrderCart?: CartItem[]
   taxRate: number
   formatCurrency: (amount: number) => string
+  formatAmount?: (amount: number) => string
+  currency?: string
   terminalName?: string
   cashierName?: string
   customers?: CustomerOption[]
@@ -86,6 +88,8 @@ export function PaymentModal({
   completedOrderCart,
   taxRate,
   formatCurrency,
+  formatAmount,
+  currency,
   terminalName = "Terminal",
   cashierName = "Cashier",
   customers = defaultCustomers,
@@ -501,6 +505,8 @@ export function PaymentModal({
         cart={completedOrderCart?.length ? completedOrderCart : cart}
         taxRate={taxRate}
         formatCurrency={formatCurrency}
+        formatAmount={formatAmount}
+        currency={currency}
         paymentMethod={methodLabel}
         terminalName={terminalName}
         cashierName={cashierName}

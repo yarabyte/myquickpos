@@ -12,6 +12,7 @@ import { Printer, X, CheckCircle2 } from "lucide-react"
 import { toast } from "sonner"
 import { cn, toTitleCase } from "@/lib/utils"
 import { printReceiptElement } from "@/lib/print-receipt"
+import { formatAmountOnly } from "@/lib/format-currency"
 import type { CartItem } from "@/lib/pos-data"
 
 export type ReceiptPrinterConfig = {
@@ -27,6 +28,8 @@ interface ReceiptPreviewModalProps {
   cart: CartItem[]
   taxRate: number
   formatCurrency: (amount: number) => string
+  formatAmount?: (amount: number) => string
+  currency?: string
   paymentMethod?: string
   terminalName?: string
   cashierName?: string
@@ -40,6 +43,8 @@ export function ReceiptPreviewModal({
   cart,
   taxRate,
   formatCurrency,
+  formatAmount,
+  currency = "USD",
   paymentMethod = "Card",
   terminalName = "Terminal",
   cashierName = "Cashier",
@@ -70,6 +75,8 @@ export function ReceiptPreviewModal({
     minute: "2-digit",
   })
   const orderNo = "#" + String(Math.floor(Math.random() * 9000) + 1000)
+  const formatLineAmount =
+    formatAmount ?? ((amount: number) => formatAmountOnly(amount, currency))
 
   useEffect(() => {
     if (open) {
@@ -134,11 +141,11 @@ export function ReceiptPreviewModal({
             <hr className="receipt-separator-thick" />
 
             {/* Infos commande */}
-            <div className="text-center mb-2 space-y-0.5">
-              <p className="font-bold uppercase tracking-wide text-[0.95em]">{orderNo}</p>
-              <p className="text-[0.9em]">{dateStr} · {timeStr}</p>
-              <p className="text-[0.9em] font-medium">Terminal: {terminalName}</p>
-              <p className="text-[0.9em] font-medium">Caissier: {cashierName}</p>
+            <div className="receipt-order-meta">
+              <p className="font-bold uppercase tracking-wide">{orderNo}</p>
+              <p>{dateStr} · {timeStr}</p>
+              <p className="font-medium">Terminal: {terminalName}</p>
+              <p className="font-medium">Caissier: {cashierName}</p>
             </div>
 
             <hr className="receipt-separator-dashed" />
@@ -156,7 +163,7 @@ export function ReceiptPreviewModal({
                   <span className="receipt-col-name">{toTitleCase(item.product.name)}</span>
                   <span className="receipt-col-qty">{item.quantity}</span>
                   <span className="receipt-col-amount">
-                    {formatCurrency(item.product.price * item.quantity)}
+                    {formatLineAmount(item.product.price * item.quantity)}
                   </span>
                 </div>
               ))}
