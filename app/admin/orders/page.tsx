@@ -21,6 +21,7 @@ export default async function OrdersPage() {
     total: Number(o.total),
     paymentMethod: o.paymentMethod,
     status: o.status,
+    terminalId: o.terminalId,
     terminalName: o.terminal?.label ?? o.terminal?.name ?? "—",
     customerName: o.customer?.name ?? null,
     cashierName: o.cashierName ?? null,
