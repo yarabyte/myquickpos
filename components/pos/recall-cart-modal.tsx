@@ -20,8 +20,8 @@ interface RecallCartModalProps {
   onClose: () => void
   terminalId: string
   products: Product[]
-  /** (cart, savedCartId) – savedCartId is passed so the parent can delete it after payment */
-  onRecall: (cart: CartItem[], savedCartId: string) => void
+  /** (cart, savedCartId, savedCartName) – savedCartId is passed so the parent can update/delete it */
+  onRecall: (cart: CartItem[], savedCartId: string, savedCartName: string) => void
   onDeleteAfterRecall?: (id: string) => void
 }
 
@@ -72,8 +72,11 @@ export function RecallCartModal({
       if (skipped > 0) {
         toast.info("Some items were removed (product no longer available)")
       }
-      onRecall(cart, id)
+      onRecall(cart, id, result.data.name)
       onClose()
+      toast.success("Commande rappelée", {
+        description: "Ajoutez des articles depuis le catalogue, puis mettez à jour ou payez.",
+      })
     },
     [products, onRecall, onClose]
   )
@@ -105,7 +108,7 @@ export function RecallCartModal({
             Recall saved order
           </DialogTitle>
           <DialogDescription>
-            Select a saved order to load it into the cart. You can then modify it or pay.
+            Sélectionnez une commande à charger dans le panier. Vous pourrez ajouter des articles, modifier les quantités, puis mettre à jour ou payer.
           </DialogDescription>
         </DialogHeader>
         {loading ? (

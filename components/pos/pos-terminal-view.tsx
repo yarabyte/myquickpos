@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback, useEffect, useRef } from "react"
 import { createOrder } from "@/app/actions/orders"
-import { deleteSavedCart } from "@/app/actions/saved-carts"
+import { deleteSavedCart, updateSavedCart } from "@/app/actions/saved-carts"
 import { getPendingTableOrders } from "@/app/actions/table-orders"
 import type { CartItem, Product, Category } from "@/lib/pos-data"
 import { PosHeader } from "./pos-header"
@@ -72,8 +72,10 @@ export function PosTerminalView({
   const [saveCartOpen, setSaveCartOpen] = useState(false)
   const [recallCartOpen, setRecallCartOpen] = useState(false)
   const [lastPaymentMethod, setLastPaymentMethod] = useState("Card")
-  /** ID of the saved cart that was recalled; deleted automatically after payment */
+  /** ID of the saved cart that was recalled; updated on save or deleted after payment */
   const [recalledSavedCartId, setRecalledSavedCartId] = useState<string | null>(null)
+  const [recalledSavedCartName, setRecalledSavedCartName] = useState<string | null>(null)
+  const [updatingSavedCart, setUpdatingSavedCart] = useState(false)
   const [tableOrderModalOrder, setTableOrderModalOrder] = useState<PendingTableOrder | null>(null)
   const [tableOrderModalOpen, setTableOrderModalOpen] = useState(false)
   const [pendingOrders, setPendingOrders] = useState(pendingTableOrders)
@@ -171,7 +173,44 @@ export function PosTerminalView({
   const clearCart = useCallback(() => {
     setCart([])
     setRecalledSavedCartId(null)
+    setRecalledSavedCartName(null)
   }, [])
+
+  const mergeCartItems = useCallback((base: CartItem[], incoming: CartItem[]) => {
+    const merged = base.map((item) => ({ ...item, product: { ...item.product } }))
+    for (const item of incoming) {
+      const existing = merged.find((i) => i.product.id === item.product.id)
+      if (existing) {
+        existing.quantity += item.quantity
+      } else {
+        merged.push({ ...item, product: { ...item.product } })
+      }
+    }
+    return merged
+  }, [])
+
+  const handleUpdateSavedOrder = useCallback(async () => {
+    if (!recalledSavedCartId || cart.length === 0) return
+    setUpdatingSavedCart(true)
+    const result = await updateSavedCart({
+      id: recalledSavedCartId,
+      name: recalledSavedCartName ?? undefined,
+      items: cart.map((item) => ({
+        productId: item.product.id,
+        quantity: item.quantity,
+      })),
+    })
+    setUpdatingSavedCart(false)
+    if (result.success) {
+      toast.success("Commande mise à jour", {
+        description: recalledSavedCartName
+          ? `"${recalledSavedCartName}" inclut les nouveaux articles.`
+          : undefined,
+      })
+    } else {
+      toast.error(result.error)
+    }
+  }, [recalledSavedCartId, recalledSavedCartName, cart])
 
   const handleCheckout = useCallback(() => {
     if (cart.length === 0) return
@@ -215,6 +254,7 @@ export function PosTerminalView({
         if (recalledSavedCartId) {
           await deleteSavedCart(recalledSavedCartId)
           setRecalledSavedCartId(null)
+          setRecalledSavedCartName(null)
         }
         toast.success("Order completed successfully!", {
           description: "Receipt is ready to print.",
@@ -237,10 +277,14 @@ export function PosTerminalView({
     }
   }, [lastCart.length])
 
-  const handleRecallCart = useCallback((items: CartItem[], savedCartId: string) => {
-    setCart(items)
-    setRecalledSavedCartId(savedCartId)
-  }, [])
+  const handleRecallCart = useCallback(
+    (items: CartItem[], savedCartId: string, savedCartName: string) => {
+      setCart((prev) => mergeCartItems(prev, items))
+      setRecalledSavedCartId(savedCartId)
+      setRecalledSavedCartName(savedCartName)
+    },
+    [mergeCartItems]
+  )
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
@@ -331,6 +375,9 @@ export function PosTerminalView({
               taxRate={taxRate}
               formatCurrency={formatCurrency}
               formatAmount={formatAmount}
+              recalledOrderName={recalledSavedCartName}
+              onUpdateSavedOrder={recalledSavedCartId ? handleUpdateSavedOrder : undefined}
+              isUpdatingSavedOrder={updatingSavedCart}
               onUpdateQuantity={updateQuantity}
               onRemoveItem={removeItem}
               onClearCart={clearCart}
@@ -389,6 +436,8 @@ export function PosTerminalView({
         onClose={() => setSaveCartOpen(false)}
         cart={cart}
         terminalId={terminalId}
+        savedCartId={recalledSavedCartId}
+        initialName={recalledSavedCartName ?? ""}
         onSaved={() => setSaveCartOpen(false)}
       />
 

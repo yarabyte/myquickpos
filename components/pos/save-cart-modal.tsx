@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import {
   Dialog,
   DialogContent,
@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Save } from "lucide-react"
-import { saveCart } from "@/app/actions/saved-carts"
+import { saveCart, updateSavedCart } from "@/app/actions/saved-carts"
 import type { CartItem } from "@/lib/pos-data"
 import { toast } from "sonner"
 
@@ -21,6 +21,8 @@ interface SaveCartModalProps {
   onClose: () => void
   cart: CartItem[]
   terminalId: string
+  savedCartId?: string | null
+  initialName?: string
   onSaved?: () => void
 }
 
@@ -29,36 +31,46 @@ export function SaveCartModal({
   onClose,
   cart,
   terminalId,
+  savedCartId = null,
+  initialName = "",
   onSaved,
 }: SaveCartModalProps) {
   const [name, setName] = useState("")
   const [saving, setSaving] = useState(false)
+  const isUpdate = Boolean(savedCartId)
+
+  useEffect(() => {
+    if (open) {
+      setName(initialName)
+    }
+  }, [open, initialName])
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault()
       const trimmed = name.trim()
       if (!trimmed) {
-        toast.error("Enter a name for this order")
+        toast.error("Entrez un nom pour cette commande")
         return
       }
       if (cart.length === 0) {
-        toast.error("Cart is empty")
+        toast.error("Le panier est vide")
         return
       }
       setSaving(true)
-      const result = await saveCart({
-        name: trimmed,
-        terminalId,
-        items: cart.map((item) => ({
-          productId: item.product.id,
-          quantity: item.quantity,
-        })),
-      })
+      const items = cart.map((item) => ({
+        productId: item.product.id,
+        quantity: item.quantity,
+      }))
+      const result = isUpdate
+        ? await updateSavedCart({ id: savedCartId!, name: trimmed, items })
+        : await saveCart({ name: trimmed, terminalId, items })
       setSaving(false)
       if (result.success) {
-        toast.success("Order saved", {
-          description: `"${trimmed}" can be recalled later.`,
+        toast.success(isUpdate ? "Commande mise à jour" : "Commande enregistrée", {
+          description: isUpdate
+            ? `"${trimmed}" a été mise à jour.`
+            : `"${trimmed}" pourra être rappelée plus tard.`,
         })
         setName("")
         onSaved?.()
@@ -67,7 +79,7 @@ export function SaveCartModal({
         toast.error(result.error)
       }
     },
-    [name, cart, terminalId, onClose, onSaved]
+    [name, cart, terminalId, onClose, onSaved, isUpdate, savedCartId]
   )
 
   const handleOpenChange = useCallback(
@@ -86,10 +98,12 @@ export function SaveCartModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Save className="h-5 w-5" />
-            Save order
+            {isUpdate ? "Mettre à jour la commande" : "Enregistrer la commande"}
           </DialogTitle>
           <DialogDescription>
-            Give this order a name so you can recall it later from this terminal.
+            {isUpdate
+              ? "Enregistrez les modifications (articles ajoutés ou quantités changées)."
+              : "Donnez un nom à cette commande pour la rappeler plus tard sur ce terminal."}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
@@ -116,7 +130,7 @@ export function SaveCartModal({
               Cancel
             </Button>
             <Button type="submit" disabled={saving || cart.length === 0 || !name.trim()}>
-              {saving ? "Saving…" : "Save"}
+              {saving ? "Enregistrement…" : isUpdate ? "Mettre à jour" : "Enregistrer"}
             </Button>
           </div>
         </form>
