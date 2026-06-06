@@ -21,6 +21,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
+import { SwitchServerButton } from "@/components/restaurant/restaurant-tablet-header"
 
 interface TableRow {
   id: string
@@ -194,13 +195,15 @@ export function TabletPageClient({
   return (
     <div className="space-y-6 p-4 pb-24 sm:p-6 sm:pb-6 lg:p-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h1 className="text-xl font-bold text-card-foreground sm:text-2xl">Tablet</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Établissements et tables. Chaque établissement est lié à un POS ; les liens tablette envoient les commandes à ce POS.
           </p>
         </div>
-        {canManageTablet && (
+        <div className="flex shrink-0 flex-col gap-2 sm:items-end">
+          <SwitchServerButton className="w-full justify-center sm:w-auto" />
+          {canManageTablet && (
         <Button
           onClick={() => {
             setEstablishmentModalOpen(true)
@@ -214,7 +217,8 @@ export function TabletPageClient({
         >
           <Plus className="mr-2 h-4 w-4" /> Nouvel établissement
         </Button>
-        )}
+          )}
+        </div>
       </div>
 
       <div className="space-y-6">
