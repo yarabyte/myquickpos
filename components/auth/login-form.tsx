@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { toTitleCase } from "@/lib/utils"
+import { ThemeToggle } from "@/components/theme-toggle"
 import { signIn } from "next-auth/react"
 import {
   clearRememberedLogin,

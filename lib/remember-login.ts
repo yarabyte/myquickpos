@@ -8,6 +8,7 @@ export type RememberedLogin = {
 }
 
 export function saveRememberedLogin(email: string, tenantSlug: string) {
+  if (typeof window === "undefined") return
   const data: RememberedLogin = {
     email,
     tenantSlug,
@@ -17,6 +18,7 @@ export function saveRememberedLogin(email: string, tenantSlug: string) {
 }
 
 export function loadRememberedLogin(): RememberedLogin | null {
+  if (typeof window === "undefined") return null
   try {
     const raw = localStorage.getItem(REMEMBER_KEY)
     if (!raw) return null
@@ -32,5 +34,6 @@ export function loadRememberedLogin(): RememberedLogin | null {
 }
 
 export function clearRememberedLogin() {
+  if (typeof window === "undefined") return
   localStorage.removeItem(REMEMBER_KEY)
 }
