@@ -33,6 +33,7 @@ interface ReceiptPreviewModalProps {
   paymentMethod?: string
   terminalName?: string
   cashierName?: string
+  orderNumber?: string
   /** When provided (e.g. from tenant settings), overrides usePrinter() config for this modal */
   printerConfig?: ReceiptPrinterConfig
 }
@@ -48,6 +49,7 @@ export function ReceiptPreviewModal({
   paymentMethod = "Card",
   terminalName = "Terminal",
   cashierName = "Cashier",
+  orderNumber,
   printerConfig: printerConfigProp,
 }: ReceiptPreviewModalProps) {
   const { config: storeConfig } = usePrinter()
@@ -74,7 +76,8 @@ export function ReceiptPreviewModal({
     hour: "2-digit",
     minute: "2-digit",
   })
-  const orderNo = "#" + String(Math.floor(Math.random() * 9000) + 1000)
+  const orderNo =
+    orderNumber?.startsWith("#") ? orderNumber : orderNumber ? `#${orderNumber}` : "#" + String(Math.floor(Math.random() * 9000) + 1000)
   const formatLineAmount =
     formatAmount ?? ((amount: number) => formatAmountOnly(amount, currency))
 

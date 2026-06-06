@@ -461,6 +461,11 @@ export function PosTerminalView({
         }}
         order={tableOrderModalOrder}
         formatCurrency={formatCurrency}
+        formatAmount={formatAmount}
+        currency={currency}
+        taxRate={taxRate}
+        terminalName={terminalName}
+        printerConfig={printerConfig}
         onCompleted={refreshPendingOrders}
       />
     </div>

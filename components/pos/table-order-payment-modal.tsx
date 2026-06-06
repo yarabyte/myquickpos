@@ -15,6 +15,8 @@ import { completeTableOrder } from "@/app/actions/table-orders"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { toast } from "sonner"
+import { ReceiptPreviewModal, type ReceiptPrinterConfig } from "./receipt-preview-modal"
+import type { CartItem } from "@/lib/pos-data"
 
 export interface PendingTableOrder {
   id: string
@@ -37,7 +39,24 @@ interface TableOrderPaymentModalProps {
   onClose: () => void
   order: PendingTableOrder | null
   formatCurrency: (amount: number) => string
+  formatAmount?: (amount: number) => string
+  currency?: string
+  taxRate?: number
+  terminalName?: string
+  printerConfig?: ReceiptPrinterConfig
   onCompleted?: () => void
+}
+
+function tableOrderToCart(order: PendingTableOrder): CartItem[] {
+  return order.items.map((item) => ({
+    product: {
+      id: item.productId,
+      name: item.product.name,
+      price: item.unitPrice,
+      category: "",
+    },
+    quantity: item.quantity,
+  }))
 }
 
 const paymentOptions = [
@@ -51,6 +70,11 @@ export function TableOrderPaymentModal({
   onClose,
   order,
   formatCurrency,
+  formatAmount,
+  currency,
+  taxRate = 0,
+  terminalName = "Terminal",
+  printerConfig,
   onCompleted,
 }: TableOrderPaymentModalProps) {
   const router = useRouter()
@@ -59,6 +83,10 @@ export function TableOrderPaymentModal({
   const [paymentMethod, setPaymentMethod] = useState("Cash")
   const [cashReceived, setCashReceived] = useState("")
   const [submitting, setSubmitting] = useState(false)
+  const [showReceipt, setShowReceipt] = useState(false)
+  const [receiptCart, setReceiptCart] = useState<CartItem[]>([])
+  const [receiptPaymentMethod, setReceiptPaymentMethod] = useState("Espèces")
+  const [receiptOrderNumber, setReceiptOrderNumber] = useState<string>()
 
   useEffect(() => {
     if (open) {
@@ -89,6 +117,12 @@ export function TableOrderPaymentModal({
     })
     setSubmitting(false)
     if (result.success) {
+      const methodLabel =
+        paymentOptions.find((opt) => opt.id === paymentMethod)?.label ?? paymentMethod
+      setReceiptCart(tableOrderToCart(order))
+      setReceiptPaymentMethod(methodLabel)
+      setReceiptOrderNumber(order.orderNumber)
+      setShowReceipt(true)
       toast.success("Commande réglée", { description: `${order.orderNumber} enregistrée.` })
       onClose()
       onCompleted?.()
@@ -101,6 +135,7 @@ export function TableOrderPaymentModal({
   const label = order ? (order.orderLabel || order.table?.name || order.orderNumber) : ""
 
   return (
+    <>
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-h-[90vh] flex flex-col max-w-md">
         <DialogHeader>
@@ -221,5 +256,29 @@ export function TableOrderPaymentModal({
         )}
       </DialogContent>
     </Dialog>
+
+    <ReceiptPreviewModal
+      open={showReceipt}
+      onClose={() => {
+        setShowReceipt(false)
+        setReceiptCart([])
+        setReceiptOrderNumber(undefined)
+      }}
+      cart={receiptCart}
+      taxRate={taxRate}
+      formatCurrency={formatCurrency}
+      formatAmount={formatAmount}
+      currency={currency}
+      paymentMethod={receiptPaymentMethod}
+      terminalName={terminalName}
+      cashierName={currentUserName.trim() || "Caissier"}
+      orderNumber={receiptOrderNumber}
+      printerConfig={
+        printerConfig
+          ? { ...printerConfig, autoPrint: true }
+          : { paperWidth: "80mm", headerHtml: "", footerHtml: "", autoPrint: true }
+      }
+    />
+    </>
   )
 }
