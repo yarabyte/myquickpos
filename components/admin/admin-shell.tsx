@@ -11,12 +11,12 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="fixed inset-0 flex overflow-hidden bg-background">
-      <aside className="hidden h-full w-64 shrink-0 md:flex">
+      <aside className="hidden h-full w-64 shrink-0 lg:flex">
         <AdminSidebar className="w-full" />
       </aside>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="flex shrink-0 items-center gap-3 border-b border-border bg-card px-4 py-3 md:hidden">
+        <header className="flex shrink-0 items-center gap-3 border-b border-border bg-card px-4 py-3 lg:hidden">
           <Button
             type="button"
             variant="outline"
@@ -33,13 +33,13 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain">
+        <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain pb-safe">
           {children}
         </main>
       </div>
 
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent side="left" className="w-[min(100vw-3rem,18rem)] p-0 [&>button]:hidden">
+        <SheetContent side="left" className="w-[min(100vw-2rem,18rem)] p-0 [&>button]:hidden">
           <SheetTitle className="sr-only">Navigation admin</SheetTitle>
           <AdminSidebar
             className="h-full w-full border-0"

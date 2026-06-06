@@ -6,6 +6,10 @@ import { tenantRepository } from "@/lib/repositories/tenant.repository"
 import { storeRepository } from "@/lib/repositories/store.repository"
 import { storeStockRepository } from "@/lib/repositories/store-stock.repository"
 import { RestaurantEstablishmentView } from "@/components/restaurant/restaurant-establishment-view"
+import {
+  expandCategoryIds,
+  filterProductsByAssignedCategories,
+} from "@/lib/category-tree"
 
 export default async function RestaurantEstablishmentPage({
   params,
@@ -57,11 +61,6 @@ export default async function RestaurantEstablishmentPage({
     })
   )
 
-  const filteredProducts =
-    assignedCategories.length > 0
-      ? productList.filter((p: { category: string }) => assignedCategories.includes(p.category))
-      : productList
-
   const categoryList = categories.map(
     (c: { id: string; name: string; icon?: string | null; parentId: string | null }) => ({
       id: c.id,
@@ -71,7 +70,17 @@ export default async function RestaurantEstablishmentPage({
     })
   )
 
+  const filteredProducts = filterProductsByAssignedCategories(
+    productList,
+    categoryList,
+    assignedCategories
+  )
+
   const currency = tenantSettings?.currency ?? "USD"
+  const expandedAssignedCategories =
+    assignedCategories.length > 0
+      ? expandCategoryIds(categoryList, assignedCategories)
+      : undefined
 
   return (
     <RestaurantEstablishmentView
@@ -79,7 +88,7 @@ export default async function RestaurantEstablishmentPage({
       establishment={{ id: establishment.id, name: establishment.name, slug: establishment.slug }}
       products={filteredProducts}
       categories={categoryList}
-      assignedCategories={assignedCategories.length > 0 ? assignedCategories : undefined}
+      assignedCategories={expandedAssignedCategories}
       taxRate={taxRate}
       currency={currency}
     />

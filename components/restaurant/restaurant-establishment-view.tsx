@@ -32,6 +32,7 @@ interface RestaurantEstablishmentViewProps {
 }
 
 type SidebarTab = "order" | "history"
+type MobileView = "menu" | "order"
 
 export function RestaurantEstablishmentView({
   establishmentSlug,
@@ -47,6 +48,7 @@ export function RestaurantEstablishmentView({
     [currency]
   )
   const [activeCategory, setActiveCategory] = useState("all")
+  const [mobileView, setMobileView] = useState<MobileView>("menu")
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>("order")
   const [cart, setCart] = useState<CartItem[]>([])
   const [orderLabel, setOrderLabel] = useState("")
@@ -135,6 +137,7 @@ export function RestaurantEstablishmentView({
       setCart(items)
       setOrderLabel(order.orderLabel ?? "")
       setSidebarTab("order")
+      setMobileView("order")
     },
     [productMap]
   )
@@ -249,8 +252,13 @@ export function RestaurantEstablishmentView({
         }
       />
 
-      <div className="flex flex-1 overflow-hidden">
-        <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
+        <div
+          className={cn(
+            "flex min-h-0 flex-1 flex-col overflow-hidden",
+            mobileView !== "menu" && "hidden lg:flex"
+          )}
+        >
           <div className="px-4 pt-3 pb-2">
             <CategoryBar
               activeCategory={activeCategory}
@@ -266,14 +274,25 @@ export function RestaurantEstablishmentView({
               formatCurrency={formatCurrency}
             />
             {filteredProducts.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-                <p className="text-sm">Aucun produit</p>
+              <div className="flex flex-col items-center justify-center gap-2 py-16 text-center text-muted-foreground">
+                <p className="text-sm font-medium">Aucun produit disponible</p>
+                <p className="max-w-sm px-4 text-xs">
+                  {allProducts.length === 0
+                    ? "Aucun produit actif n'est configuré pour cet établissement."
+                    : "Les catégories assignées au terminal POS ne correspondent à aucun produit."}
+                </p>
               </div>
             )}
           </ScrollArea>
         </div>
 
-        <div className="flex w-full max-w-[440px] flex-col gap-3 border-l border-border bg-background p-3 sm:w-[420px]">
+        <div
+          className={cn(
+            "flex min-h-0 flex-col gap-3 border-t border-border bg-background p-3 lg:w-[420px] lg:max-w-[440px] lg:shrink-0 lg:border-l lg:border-t-0",
+            mobileView !== "order" && "hidden lg:flex",
+            "flex-1 lg:flex-none"
+          )}
+        >
           <div className="flex rounded-lg border border-border bg-card p-1">
             <button
               type="button"
@@ -456,6 +475,39 @@ export function RestaurantEstablishmentView({
             </div>
           )}
         </div>
+      </div>
+
+      <div className="flex shrink-0 gap-2 border-t border-border bg-card p-2 lg:hidden">
+        <button
+          type="button"
+          onClick={() => setMobileView("menu")}
+          className={cn(
+            "flex flex-1 items-center justify-center rounded-lg py-3 text-sm font-medium touch-manipulation",
+            mobileView === "menu"
+              ? "bg-primary text-primary-foreground"
+              : "bg-secondary text-muted-foreground"
+          )}
+        >
+          Menu
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileView("order")}
+          className={cn(
+            "flex flex-1 items-center justify-center gap-2 rounded-lg py-3 text-sm font-medium touch-manipulation",
+            mobileView === "order"
+              ? "bg-primary text-primary-foreground"
+              : "bg-secondary text-muted-foreground"
+          )}
+        >
+          <ShoppingCart className="h-4 w-4" />
+          Commande
+          {itemCount > 0 && (
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-foreground px-1 text-xs font-bold text-primary">
+              {itemCount}
+            </span>
+          )}
+        </button>
       </div>
 
       <ConfirmDialog

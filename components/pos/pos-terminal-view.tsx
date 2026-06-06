@@ -21,6 +21,7 @@ import { Monitor, ArrowLeft, UtensilsCrossed, Clock } from "lucide-react"
 import Link from "next/link"
 import { useSession } from "next-auth/react"
 import { formatWithCurrency, formatAmountOnly } from "@/lib/format-currency"
+import { expandCategoryIds } from "@/lib/category-tree"
 
 export type PrinterConfig = {
   paperWidth: "58mm" | "80mm"
@@ -121,8 +122,9 @@ export function PosTerminalView({
 
   const terminalProducts = useMemo(() => {
     if (assignedCategories.length === 0) return allProducts
-    return allProducts.filter((p) => assignedCategories.includes(p.category))
-  }, [assignedCategories, allProducts])
+    const allowed = new Set(expandCategoryIds(categories, assignedCategories))
+    return allProducts.filter((p) => allowed.has(p.category))
+  }, [assignedCategories, allProducts, categories])
 
   const filteredProducts = useMemo(() => {
     let result = terminalProducts
