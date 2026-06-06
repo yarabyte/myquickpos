@@ -43,7 +43,13 @@ const navItems: {
   { href: "/admin/settings", label: "Settings", icon: Settings, permission: ROUTE_PERMISSIONS["/admin/settings"] },
 ]
 
-export function AdminSidebar() {
+export function AdminSidebar({
+  className,
+  onNavigate,
+}: {
+  className?: string
+  onNavigate?: () => void
+}) {
   const pathname = usePathname()
   const router = useRouter()
   const { data: session } = useSession()
@@ -62,7 +68,7 @@ export function AdminSidebar() {
   }
 
   return (
-    <aside className="flex h-full w-64 shrink-0 flex-col border-r border-border bg-card">
+    <aside className={cn("flex h-full w-64 shrink-0 flex-col border-r border-border bg-card", className)}>
       <div className="flex items-center gap-3 border-b border-border px-5 py-4">
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
           <Monitor className="h-5 w-5 text-primary-foreground" />
@@ -84,6 +90,7 @@ export function AdminSidebar() {
               <li key={item.href}>
                 <Link
                   href={item.href}
+                  onClick={onNavigate}
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                     isActive

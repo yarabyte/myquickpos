@@ -110,7 +110,7 @@ export function TabletPwaProvider({ children }: { children: React.ReactNode }) {
       )}
 
       {showInstall && (
-        <div className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-md animate-in slide-in-from-bottom-4 fade-in duration-300">
+        <div className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-md animate-in slide-in-from-bottom-4 fade-in duration-300 max-md:bottom-6">
           <div className="flex items-center gap-3 rounded-xl border border-primary/30 bg-card p-4 shadow-lg">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary">
               <Download className="h-5 w-5 text-primary-foreground" />

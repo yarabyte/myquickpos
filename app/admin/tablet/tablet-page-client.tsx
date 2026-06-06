@@ -192,11 +192,11 @@ export function TabletPageClient({
   }
 
   return (
-    <div className="p-6 lg:p-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-card-foreground">Tablet</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold text-card-foreground sm:text-2xl">Tablet</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Établissements et tables. Chaque établissement est lié à un POS ; les liens tablette envoient les commandes à ce POS.
           </p>
         </div>
@@ -210,7 +210,7 @@ export function TabletPageClient({
             setEstablishmentTerminalId(terminals[0]?.id ?? "")
             setError("")
           }}
-          className="bg-primary text-primary-foreground hover:bg-primary/90"
+          className="w-full shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 sm:w-auto"
         >
           <Plus className="mr-2 h-4 w-4" /> Nouvel établissement
         </Button>
@@ -223,27 +223,27 @@ export function TabletPageClient({
             key={establishment.id}
             className="rounded-xl border border-border bg-card overflow-hidden"
           >
-            <div className="flex items-center justify-between p-5 border-b border-border bg-secondary/30">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+            <div className="flex flex-col gap-4 border-b border-border bg-secondary/30 p-4 sm:p-5 lg:flex-row lg:items-start lg:justify-between">
+              <div className="flex min-w-0 items-start gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                   <Tablet className="h-5 w-5 text-primary" />
                 </div>
-                <div>
-                  <h2 className="font-semibold text-card-foreground">{establishment.name}</h2>
-                  <p className="text-xs text-muted-foreground">
+                <div className="min-w-0">
+                  <h2 className="break-words font-semibold text-card-foreground">{establishment.name}</h2>
+                  <p className="mt-1 break-words text-xs text-muted-foreground">
                     slug: {establishment.slug} · POS: {establishment.terminalName}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
+                  <p className="mt-0.5 text-xs text-muted-foreground">
                     À l&apos;envoi de la commande, le serveur saisit le nom de la table ou du client.
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex flex-wrap items-center gap-2 lg:shrink-0 lg:justify-end">
                 <a
                   href={getTabletLink(establishment.slug)}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20"
+                  className="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/20 sm:w-auto sm:py-1.5 sm:text-xs"
                 >
-                  <ExternalLink className="h-3 w-3" />
+                  <ExternalLink className="h-3.5 w-3.5" />
                   Ouvrir la tablette
                 </a>
                 {canManageTablet && (
@@ -289,7 +289,7 @@ export function TabletPageClient({
                 )}
               </div>
             </div>
-            <div className="p-5">
+            <div className="p-4 sm:p-5">
               {establishment.tables.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Aucune table.</p>
               ) : (
@@ -297,10 +297,10 @@ export function TabletPageClient({
                   {establishment.tables.map((table) => (
                     <div
                       key={table.id}
-                      className="flex items-center justify-between rounded-lg border border-border bg-secondary/20 px-4 py-3"
+                      className="flex flex-col gap-3 rounded-lg border border-border bg-secondary/20 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                     >
-                      <div className="flex items-center gap-2">
-                        <LayoutGrid className="h-4 w-4 text-muted-foreground" />
+                      <div className="flex min-w-0 items-center gap-2">
+                        <LayoutGrid className="h-4 w-4 shrink-0 text-muted-foreground" />
                         <span className="font-medium text-card-foreground">{table.name}</span>
                         <span className="text-xs text-muted-foreground">({table.slug})</span>
                       </div>
@@ -341,7 +341,7 @@ export function TabletPageClient({
       </div>
 
       {establishments.length === 0 && (
-        <div className="rounded-xl border border-dashed border-border p-12 text-center text-muted-foreground">
+        <div className="rounded-xl border border-dashed border-border p-8 text-center text-muted-foreground sm:p-12">
           <Tablet className="h-12 w-12 mx-auto mb-3 opacity-50" />
           <p>
             {canManageTablet
