@@ -9,7 +9,9 @@ import {
 } from "@/components/ui/dialog"
 import { usePrinter } from "@/hooks/use-printer"
 import { Printer, X, CheckCircle2 } from "lucide-react"
+import { toast } from "sonner"
 import { cn, toTitleCase } from "@/lib/utils"
+import { printReceiptElement } from "@/lib/print-receipt"
 import type { CartItem } from "@/lib/pos-data"
 
 export type ReceiptPrinterConfig = {
@@ -76,19 +78,17 @@ export function ReceiptPreviewModal({
     }
   }, [open])
 
-  const handlePrint = useCallback(() => {
+  const handlePrint = useCallback(async () => {
     if (!receiptRef.current) return
     setPrinting(true)
-    const printContent = receiptRef.current
-    const onAfterPrint = () => {
-      printContent.classList.remove("receipt-print-only")
-      window.removeEventListener("afterprint", onAfterPrint)
-      setPrinting(false)
+    try {
+      await printReceiptElement(receiptRef.current)
       setPrinted(true)
+    } catch {
+      toast.error("Impossible d'imprimer le ticket")
+    } finally {
+      setPrinting(false)
     }
-    window.addEventListener("afterprint", onAfterPrint)
-    printContent.classList.add("receipt-print-only")
-    window.print()
   }, [])
 
   useEffect(() => {
@@ -120,8 +120,7 @@ export function ReceiptPreviewModal({
             className={cn(
               "bg-white text-black shadow-lg relative receipt-thermal-pro",
               "font-mono leading-snug",
-              config.paperWidth === "58mm" ? "text-[10px]" : "text-[11px]",
-              printing && "animate-receipt-print"
+              config.paperWidth === "58mm" ? "text-[12px]" : "text-[13px]"
             )}
           >
             {/* En-tête commerce */}
@@ -132,20 +131,20 @@ export function ReceiptPreviewModal({
               />
             )}
 
-            <div className="border-t-2 border-black my-2" />
+            <hr className="receipt-separator-thick" />
 
             {/* Infos commande */}
             <div className="text-center mb-2 space-y-0.5">
               <p className="font-bold uppercase tracking-wide text-[0.95em]">{orderNo}</p>
-              <p className="text-[0.9em] text-gray-700">{dateStr} · {timeStr}</p>
-              <p className="text-[0.9em] font-medium text-gray-800">Terminal: {terminalName}</p>
-              <p className="text-[0.9em] font-medium text-gray-800">Caissier: {cashierName}</p>
+              <p className="text-[0.9em]">{dateStr} · {timeStr}</p>
+              <p className="text-[0.9em] font-medium">Terminal: {terminalName}</p>
+              <p className="text-[0.9em] font-medium">Caissier: {cashierName}</p>
             </div>
 
-            <div className="border-t border-dashed border-gray-500 my-2" />
+            <hr className="receipt-separator-dashed" />
 
             {/* Colonnes articles */}
-            <div className="receipt-line font-bold uppercase tracking-wide text-[0.9em] mb-1 text-gray-700">
+            <div className="receipt-line font-bold uppercase tracking-wide text-[0.9em] mb-1">
               <span className="receipt-col-name">Article</span>
               <span className="receipt-col-qty">Qté</span>
               <span className="receipt-col-amount">Montant</span>
@@ -169,7 +168,7 @@ export function ReceiptPreviewModal({
               </div>
             )}
 
-            <div className="border-t border-dashed border-gray-500 my-2" />
+            <hr className="receipt-separator-dashed" />
 
             {/* Totaux */}
             <div className="space-y-0.5 text-[0.95em]">
@@ -178,33 +177,33 @@ export function ReceiptPreviewModal({
                 <span>{formatCurrency(subtotal)}</span>
               </div>
               {(taxRate ?? 0) > 0 ? (
-                <div className="receipt-row text-gray-700">
+                <div className="receipt-row">
                   <span>TVA ({taxRate}%)</span>
                   <span>{formatCurrency(tax)}</span>
                 </div>
               ) : (
-                <div className="receipt-row text-gray-600">
+                <div className="receipt-row">
                   <span>TVA</span>
                   <span>—</span>
                 </div>
               )}
-              <div className="border-t-2 border-black my-1.5" />
+              <hr className="receipt-separator-thick" />
               <div className="receipt-row font-bold text-[1.05em]">
                 <span>TOTAL</span>
                 <span>{formatCurrency(total)}</span>
               </div>
             </div>
 
-            <div className="border-t border-dashed border-gray-500 my-2" />
+            <hr className="receipt-separator-dashed" />
 
             <div className="receipt-row text-[0.95em]">
-              <span className="text-gray-700">Paiement</span>
+              <span>Paiement</span>
               <span className="font-semibold">{paymentMethod}</span>
             </div>
 
             {config.footerHtml && (
               <>
-                <div className="border-t border-dashed border-gray-500 my-2" />
+                <hr className="receipt-separator-dashed" />
                 <div
                   className="receipt-preview text-center text-[0.9em]"
                   dangerouslySetInnerHTML={{ __html: config.footerHtml }}
@@ -212,14 +211,7 @@ export function ReceiptPreviewModal({
               </>
             )}
 
-            <div
-              className="absolute bottom-0 left-0 right-0 h-3 pointer-events-none opacity-40"
-              style={{
-                backgroundImage:
-                  "repeating-linear-gradient(135deg, transparent, transparent 2px, #999 2px, #999 3px)",
-              }}
-            />
-            <div className="h-3" />
+            <div className="receipt-no-print h-3" aria-hidden />
           </div>
         </div>
 

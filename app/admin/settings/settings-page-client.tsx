@@ -242,7 +242,7 @@ export function SettingsPageClient({ initialSettings }: { initialSettings: Initi
                 data-paper-width={printer.paperWidth}
                 className={cn(
                   "mx-auto rounded-md border border-dashed border-border bg-white text-black overflow-hidden receipt-thermal-pro font-mono",
-                  printer.paperWidth === "58mm" ? "text-[10px]" : "text-[11px]"
+                  printer.paperWidth === "58mm" ? "text-[12px]" : "text-[13px]"
                 )}
               >
                 <div className="space-y-0">
