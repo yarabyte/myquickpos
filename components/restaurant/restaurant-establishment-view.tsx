@@ -240,16 +240,7 @@ export function RestaurantEstablishmentView({
     <div className="flex h-dvh flex-col overflow-hidden bg-background">
       <RestaurantTabletHeader
         establishmentName={establishment.name}
-        subtitle={
-          <>
-            Indiquez le nom de la table ou du client avant d&apos;envoyer.
-            {pendingCount > 0 && (
-              <span className="ml-2 text-amber-500">
-                · {pendingCount} commande{pendingCount > 1 ? "s" : ""} en attente
-              </span>
-            )}
-          </>
-        }
+        pendingCount={pendingCount}
       />
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">

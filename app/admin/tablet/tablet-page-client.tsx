@@ -202,7 +202,7 @@ export function TabletPageClient({
           </p>
         </div>
         <div className="flex shrink-0 flex-col gap-2 sm:items-end">
-          <SwitchServerButton className="w-full justify-center sm:w-auto" />
+          <SwitchServerButton className="w-full justify-center sm:w-auto" iconOnly={false} />
           {canManageTablet && (
         <Button
           onClick={() => {

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { usePathname } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { Download, Wifi, WifiOff, SignalLow, X } from "lucide-react"
+import { Download, WifiOff, SignalLow, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useNetworkStatus } from "@/hooks/use-network-status"
 import { sessionPermissionsFromUser } from "@/lib/permissions"
@@ -140,12 +140,6 @@ export function TabletPwaProvider({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      {networkStatus === "online" && isServerProfile && isStandalone() && (
-        <div className="fixed left-4 top-4 z-40 flex items-center gap-1.5 rounded-full border border-border bg-card/90 px-3 py-1 text-xs text-muted-foreground shadow-sm backdrop-blur-sm">
-          <Wifi className="h-3 w-3 text-primary" />
-          Mode tablette actif
-        </div>
-      )}
     </>
   )
 }
