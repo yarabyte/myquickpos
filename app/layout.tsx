@@ -9,11 +9,13 @@ import { Toaster } from '@/components/ui/sonner'
 import { RadixPortalCleanup } from '@/components/radix-portal-cleanup'
 
 import './globals.css'
+import { getAppUrl } from '@/lib/app-url'
 
 const _inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 const _jetbrains = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jetbrains' })
 
 export const metadata: Metadata = {
+  metadataBase: new URL(getAppUrl()),
   title: 'MyQuickPOS - Point of Sale',
   description: 'Modern touch-screen point of sale system for managing terminals, orders, and payments.',
   appleWebApp: {
@@ -23,6 +25,14 @@ export const metadata: Metadata = {
   },
   formatDetection: {
     telephone: false,
+  },
+  icons: {
+    icon: [
+      { url: "/icons/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/icons/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
 }
 
@@ -44,9 +54,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.jpg" />
-      </head>
       <body className={`${_inter.variable} ${_jetbrains.variable} font-sans antialiased`}>
         <ThemeProvider
           attribute="class"

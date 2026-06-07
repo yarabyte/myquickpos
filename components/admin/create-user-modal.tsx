@@ -18,6 +18,7 @@ import { toast } from "sonner"
 import type { Role } from "@prisma/client"
 import type { ActionResult } from "@/app/actions/users"
 import { PermissionsEditor } from "@/components/admin/permissions-editor"
+import { TabletAccessSelector, type TabletOption } from "@/components/admin/tablet-access-selector"
 import {
   BUILTIN_ROLE_PERMISSIONS,
   permissionsToJson,
@@ -25,6 +26,10 @@ import {
   type PermissionKey,
   type RolePermissionsMap,
 } from "@/lib/permissions"
+import {
+  allowedTabletIdsToJson,
+  userNeedsTabletScope,
+} from "@/lib/tablet-access"
 
 interface CreateUserModalProps {
   open: boolean
@@ -36,8 +41,10 @@ interface CreateUserModalProps {
     role: Role
     status: "active" | "inactive"
     customPermissions: PermissionKey[] | null
+    allowedTabletIds: string[] | null
   } | null
   terminals: { id: string; name: string }[]
+  tablets: TabletOption[]
   rolePermissions: RolePermissionsMap | null
   onCreateUser: (formData: FormData) => Promise<ActionResult<unknown>>
   onUpdateUser: (id: string, formData: FormData) => Promise<ActionResult<unknown>>
@@ -64,6 +71,7 @@ export function CreateUserModal({
   onClose,
   editUser,
   terminals,
+  tablets,
   rolePermissions,
   onCreateUser,
   onUpdateUser,
@@ -77,6 +85,7 @@ export function CreateUserModal({
   const [status, setStatus] = useState<"active" | "inactive">("active")
   const [useCustomPermissions, setUseCustomPermissions] = useState(false)
   const [selectedPermissions, setSelectedPermissions] = useState<PermissionKey[]>([])
+  const [selectedTabletIds, setSelectedTabletIds] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState("")
 
@@ -91,6 +100,16 @@ export function CreateUserModal({
         tenantRolePermissions: rolePermissions,
       }),
     [uiRole, editUser?.role, rolePermissions]
+  )
+
+  const effectivePermissions = useMemo(
+    () => (useCustomPermissions ? selectedPermissions : defaultPermissionsForRole),
+    [useCustomPermissions, selectedPermissions, defaultPermissionsForRole]
+  )
+
+  const needsTabletScope = useMemo(
+    () => userNeedsTabletScope(effectivePermissions, submitRole),
+    [effectivePermissions, submitRole]
   )
 
   useEffect(() => {
@@ -113,6 +132,9 @@ export function CreateUserModal({
               tenantRolePermissions: rolePermissions,
             })
       )
+      setSelectedTabletIds(
+        editUser.allowedTabletIds ?? tablets.map((t) => t.id)
+      )
     } else {
       resetForm()
     }
@@ -127,20 +149,26 @@ export function CreateUserModal({
     setStatus("active")
     setUseCustomPermissions(false)
     setSelectedPermissions([...BUILTIN_ROLE_PERMISSIONS.CASHIER])
+    setSelectedTabletIds([])
     setFormError("")
     setSubmitting(false)
   }
 
   function handleRoleChange(next: UiRole) {
     setUiRole(next)
-    if (!useCustomPermissions) {
-      setSelectedPermissions(
-        resolveUserPermissions({
-          role: next,
+    const nextRole = roleForSubmit(next, editUser?.role)
+    const perms = useCustomPermissions
+      ? selectedPermissions
+      : resolveUserPermissions({
+          role: nextRole,
           customPermissions: null,
           tenantRolePermissions: rolePermissions,
         })
-      )
+    if (!useCustomPermissions) {
+      setSelectedPermissions(perms)
+    }
+    if (userNeedsTabletScope(perms, nextRole) && selectedTabletIds.length === 0) {
+      setSelectedTabletIds(tablets.map((t) => t.id))
     }
   }
 
@@ -157,15 +185,20 @@ export function CreateUserModal({
     setFormError("")
 
     if (!name.trim() || !email.trim()) {
-      setFormError("Nom et email sont requis.")
+      setFormError("Name and email are required.")
       return
     }
     if (!isEdit && !password.trim()) {
-      setFormError("Le mot de passe est requis.")
+      setFormError("Password is required.")
       return
     }
     if (!isEdit && password.trim().length < 6) {
-      setFormError("Le mot de passe doit contenir au moins 6 caractères.")
+      setFormError("Password must be at least 6 characters.")
+      return
+    }
+
+    if (needsTabletScope && selectedTabletIds.length === 0) {
+      setFormError("Select at least one tablet for restaurant access.")
       return
     }
 
@@ -179,6 +212,11 @@ export function CreateUserModal({
     if (useCustomPermissions) {
       fd.set("permissions", permissionsToJson(selectedPermissions))
     }
+    if (needsTabletScope) {
+      fd.set("allowedTabletIds", allowedTabletIdsToJson(selectedTabletIds))
+    } else {
+      fd.set("allowedTabletIds", "null")
+    }
 
     setSubmitting(true)
     try {
@@ -187,7 +225,7 @@ export function CreateUserModal({
         : await onCreateUser(fd)
 
       if (result.success) {
-        toast.success(isEdit ? "Utilisateur mis à jour" : "Utilisateur créé")
+        toast.success(isEdit ? "User updated" : "User created — login details sent by email")
         resetForm()
         await onSuccess()
         onClose()
@@ -196,7 +234,7 @@ export function CreateUserModal({
         toast.error(result.error)
       }
     } catch {
-      const message = "Une erreur est survenue. Réessayez."
+      const message = "Something went wrong. Please try again."
       setFormError(message)
       toast.error(message)
     } finally {
@@ -216,19 +254,19 @@ export function CreateUserModal({
       <DialogContent className="sm:max-w-2xl bg-card border-border max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-card-foreground">
-            {isEdit ? "Modifier l'utilisateur" : "Nouvel utilisateur"}
+            {isEdit ? "Edit user" : "New user"}
           </DialogTitle>
           <DialogDescription className="text-muted-foreground">
             {isEdit
-              ? "Mettez à jour les informations et les droits d'accès."
-              : "Ajoutez un manager, serveur ou caissier POS."}
+              ? "Update account information and access permissions."
+              : "Add a manager, server, or POS cashier."}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-5 mt-2">
           <div className="flex flex-col gap-2">
             <Label htmlFor="user-name" className="text-sm font-medium text-card-foreground">
-              Nom complet
+              Full name
             </Label>
             <div className="relative">
               <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -236,7 +274,7 @@ export function CreateUserModal({
                 id="user-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Jean Dupont"
+                placeholder="John Smith"
                 className="pl-10 bg-secondary border-border text-card-foreground"
                 required
               />
@@ -254,7 +292,7 @@ export function CreateUserModal({
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="jean@example.com"
+                placeholder="john@example.com"
                 className="pl-10 bg-secondary border-border text-card-foreground"
                 required
               />
@@ -263,7 +301,7 @@ export function CreateUserModal({
 
           <div className="flex flex-col gap-2">
             <Label htmlFor="user-password" className="text-sm font-medium text-card-foreground">
-              {isEdit ? "Nouveau mot de passe (optionnel)" : "Mot de passe"}
+              {isEdit ? "New password (optional)" : "Password"}
             </Label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -272,7 +310,7 @@ export function CreateUserModal({
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder={isEdit ? "Laisser vide pour conserver" : "Mot de passe"}
+                placeholder={isEdit ? "Leave blank to keep current" : "Password"}
                 className="pl-10 bg-secondary border-border text-card-foreground"
                 required={!isEdit}
               />
@@ -280,7 +318,7 @@ export function CreateUserModal({
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label className="text-sm font-medium text-card-foreground">Rôle</Label>
+            <Label className="text-sm font-medium text-card-foreground">Role</Label>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <button
                 type="button"
@@ -306,7 +344,7 @@ export function CreateUserModal({
                 )}
               >
                 <UtensilsCrossed className="h-4 w-4 shrink-0" />
-                Serveur
+                Server
               </button>
               <button
                 type="button"
@@ -319,12 +357,12 @@ export function CreateUserModal({
                 )}
               >
                 <Monitor className="h-4 w-4 shrink-0" />
-                Caissier
+                Cashier
               </button>
             </div>
             {uiRole === "SERVER" && (
               <p className="text-xs text-muted-foreground">
-                Accès au module Tablette et aux interfaces restaurant pour prendre les commandes.
+                Access to the Tablet module and restaurant interfaces for taking orders.
               </p>
             )}
           </div>
@@ -333,12 +371,12 @@ export function CreateUserModal({
             <div className="flex items-center justify-between gap-3">
               <div>
                 <Label className="text-sm font-medium text-card-foreground">
-                  Droits personnalisés
+                  Custom permissions
                 </Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {useCustomPermissions
-                    ? "Configurez manuellement les accès de cet utilisateur"
-                    : "Utilise le profil par défaut du rôle"}
+                    ? "Manually configure this user's access"
+                    : "Uses the role's default profile"}
                 </p>
               </div>
               <Switch
@@ -356,6 +394,17 @@ export function CreateUserModal({
                 value={selectedPermissions}
                 onChange={setSelectedPermissions}
                 compact
+                role={submitRole}
+                tablets={tablets}
+                allowedTabletIds={selectedTabletIds}
+                onAllowedTabletIdsChange={setSelectedTabletIds}
+              />
+            )}
+            {!useCustomPermissions && needsTabletScope && (
+              <TabletAccessSelector
+                tablets={tablets}
+                value={selectedTabletIds}
+                onChange={setSelectedTabletIds}
               />
             )}
           </div>
@@ -363,10 +412,10 @@ export function CreateUserModal({
           {uiRole === "CASHIER" && terminals.length > 0 && (
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium text-card-foreground">
-                Terminaux assignés (bientôt)
+                Assigned terminals (coming soon)
               </Label>
               <p className="text-xs text-muted-foreground">
-                Sélection visuelle — persistance à venir
+                Visual selection — persistence coming soon
               </p>
               <div className="flex flex-col gap-1.5 pt-1">
                 {terminals.map((t) => {
@@ -392,7 +441,7 @@ export function CreateUserModal({
           )}
 
           <div className="flex flex-col gap-2">
-            <Label className="text-sm font-medium text-card-foreground">Statut</Label>
+            <Label className="text-sm font-medium text-card-foreground">Status</Label>
             <div className="flex gap-2">
               <button
                 type="button"
@@ -404,7 +453,7 @@ export function CreateUserModal({
                     : "border-border bg-secondary text-muted-foreground"
                 )}
               >
-                Actif
+                Active
               </button>
               <button
                 type="button"
@@ -416,7 +465,7 @@ export function CreateUserModal({
                     : "border-border bg-secondary text-muted-foreground"
                 )}
               >
-                Inactif
+                Inactive
               </button>
             </div>
           </div>
@@ -429,18 +478,18 @@ export function CreateUserModal({
 
           <div className="flex gap-3 pt-2">
             <Button type="button" variant="outline" className="flex-1" onClick={onClose} disabled={submitting}>
-              Annuler
+              Cancel
             </Button>
             <Button type="submit" className="flex-1" disabled={submitting}>
               {submitting ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Enregistrement…
+                  Saving…
                 </>
               ) : isEdit ? (
-                "Enregistrer"
+                "Save"
               ) : (
-                "Créer"
+                "Create"
               )}
             </Button>
           </div>

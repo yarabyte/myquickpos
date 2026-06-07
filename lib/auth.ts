@@ -37,6 +37,19 @@ export async function getSessionPermissions(): Promise<PermissionKey[]> {
   return sessionPermissionsFromUser(user ?? {})
 }
 
+export async function getSessionAllowedTabletIds(): Promise<string[] | null> {
+  const session = await auth()
+  const ids = (session?.user as { allowedTabletIds?: string[] | null } | undefined)
+    ?.allowedTabletIds
+  if (ids == null) return null
+  return ids
+}
+
+export async function getSessionRole(): Promise<string | null> {
+  const session = await auth()
+  return (session?.user as { role?: string } | undefined)?.role ?? null
+}
+
 export async function requireRole(allowedRoles: string[]) {
   const session = await auth()
   const role = (session?.user as { role?: string } | undefined)?.role

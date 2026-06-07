@@ -77,7 +77,7 @@ Connexion test : `xtvalizo@gmail.com` / tenant `emilemicheline`.
 
 - **RLS** : l'app utilise Prisma avec le rôle `postgres` (bypass RLS). Pas de changement requis pour l'instant.
 - **Auth** : NextAuth reste géré par l'app (table `User`), pas Supabase Auth.
-- **Production** : mettez à jour `AUTH_URL` / `NEXTAUTH_URL` avec l'URL de déploiement (Vercel, etc.).
+- **Production** : `AUTH_URL` / `NEXTAUTH_URL` = `https://myquickpos.app`
 - **Sauvegardes** : activez les backups automatiques dans Supabase (Settings → Database).
 
 ## Dépannage

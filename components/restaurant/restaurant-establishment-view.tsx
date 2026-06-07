@@ -122,15 +122,15 @@ export function RestaurantEstablishmentView({
       for (const item of order.items) {
         const product = productMap.get(item.productId)
         if (!product) {
-          toast.error("Produit introuvable", {
-            description: `${item.productName} n'est plus disponible.`,
+          toast.error("Product not found", {
+            description: `${item.productName} is no longer available.`,
           })
           continue
         }
         items.push({ product, quantity: item.quantity })
       }
       if (items.length === 0) {
-        toast.error("Impossible de modifier cette commande")
+        toast.error("Unable to edit this order")
         return
       }
       setEditingOrder(order)
@@ -192,8 +192,8 @@ export function RestaurantEstablishmentView({
         setOrderLabel("")
         setEditingOrder(null)
         setHistoryRefreshKey((k) => k + 1)
-        toast.success("Commande mise à jour", {
-          description: `Commande ${result.data.orderNumber} modifiée.`,
+        toast.success("Order updated", {
+          description: `Order ${result.data.orderNumber} updated.`,
         })
       } else {
         toast.error(result.error)
@@ -207,8 +207,8 @@ export function RestaurantEstablishmentView({
       setCart([])
       setOrderLabel("")
       setHistoryRefreshKey((k) => k + 1)
-      toast.success("Commande envoyée au POS", {
-        description: `Commande ${result.data.orderNumber} en attente.`,
+      toast.success("Order sent to POS", {
+        description: `Order ${result.data.orderNumber} pending.`,
       })
     } else {
       await queueOrder(payload)
@@ -217,13 +217,13 @@ export function RestaurantEstablishmentView({
 
   const handleSendClick = useCallback(() => {
     if (cart.length === 0) {
-      toast.error("Panier vide", { description: "Ajoutez au moins un article." })
+      toast.error("Empty cart", { description: "Add at least one item." })
       return
     }
     const label = orderLabel?.trim()
     if (!label) {
-      toast.error("Nom requis", {
-        description: "Indiquez le nom de la table ou du client avant d'envoyer.",
+      toast.error("Name required", {
+        description: "Enter the table or customer name before sending.",
       })
       return
     }
@@ -266,11 +266,11 @@ export function RestaurantEstablishmentView({
             />
             {filteredProducts.length === 0 && (
               <div className="flex flex-col items-center justify-center gap-2 py-16 text-center text-muted-foreground">
-                <p className="text-sm font-medium">Aucun produit disponible</p>
+                <p className="text-sm font-medium">No products available</p>
                 <p className="max-w-sm px-4 text-xs">
                   {allProducts.length === 0
-                    ? "Aucun produit actif n'est configuré pour cet établissement."
-                    : "Les catégories assignées au terminal POS ne correspondent à aucun produit."}
+                    ? "No active products are configured for this tablet."
+                    : "The categories assigned to the POS terminal do not match any products."}
                 </p>
               </div>
             )}
@@ -296,7 +296,7 @@ export function RestaurantEstablishmentView({
               )}
             >
               <ShoppingCart className="h-4 w-4" />
-              Commande
+              Order
             </button>
             <button
               type="button"
@@ -308,7 +308,7 @@ export function RestaurantEstablishmentView({
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              Historique
+              History
             </button>
           </div>
 
@@ -324,13 +324,13 @@ export function RestaurantEstablishmentView({
               {editingOrder && (
                 <div className="flex items-center justify-between gap-2 border-b border-border bg-amber-500/10 px-3 py-2">
                   <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
-                    Modification · {editingOrder.orderNumber}
+                    Editing · {editingOrder.orderNumber}
                   </p>
                   <button
                     type="button"
                     onClick={cancelEdit}
                     className="flex h-7 w-7 items-center justify-center rounded-md text-amber-700 hover:bg-amber-500/20 dark:text-amber-400"
-                    aria-label="Annuler la modification"
+                    aria-label="Cancel editing"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -341,7 +341,7 @@ export function RestaurantEstablishmentView({
                 <div className="flex items-center gap-2">
                   <ShoppingCart className="h-5 w-5 text-primary" />
                   <h2 className="text-base font-semibold text-card-foreground">
-                    {editingOrder ? "Modifier la commande" : "Commande"}
+                    {editingOrder ? "Edit order" : "Order"}
                   </h2>
                   {cart.length > 0 && (
                     <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-bold text-primary-foreground">
@@ -355,7 +355,7 @@ export function RestaurantEstablishmentView({
                     onClick={clearCart}
                     className="text-xs font-medium text-destructive hover:text-destructive/80"
                   >
-                    Tout vider
+                    Clear all
                   </button>
                 )}
               </div>
@@ -364,8 +364,8 @@ export function RestaurantEstablishmentView({
                 {cart.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
                     <ShoppingCart className="mb-2 h-10 w-10 opacity-30" />
-                    <p className="text-sm">Aucun article</p>
-                    <p className="text-xs">Touchez un produit pour l&apos;ajouter</p>
+                    <p className="text-sm">No items</p>
+                    <p className="text-xs">Tap a product to add it</p>
                   </div>
                 ) : (
                   <div className="space-y-2 py-2">
@@ -403,7 +403,7 @@ export function RestaurantEstablishmentView({
                           type="button"
                           onClick={() => removeItem(item.product.id)}
                           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-destructive/15 text-destructive hover:bg-destructive/25 active:bg-destructive/35 touch-manipulation"
-                          aria-label="Supprimer"
+                          aria-label="Remove"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -419,25 +419,25 @@ export function RestaurantEstablishmentView({
                   <div className="space-y-3 p-3">
                     <div className="space-y-1.5">
                       <label htmlFor="order-label" className="text-xs font-medium text-muted-foreground">
-                        Nom de la table ou du client <span className="text-destructive">*</span>
+                        Table or customer name <span className="text-destructive">*</span>
                       </label>
                       <input
                         id="order-label"
                         type="text"
                         value={orderLabel}
                         onChange={(e) => setOrderLabel(e.target.value)}
-                        placeholder="Table 5 ou nom du client"
+                        placeholder="Table 5 or customer name"
                         className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                       />
                     </div>
                     <div className="space-y-1 text-sm">
                       <div className="flex justify-between text-muted-foreground">
-                        <span>Sous-total</span>
+                        <span>Subtotal</span>
                         <span className="font-mono">{formatCurrency(subtotal)}</span>
                       </div>
                       {taxRate > 0 && (
                         <div className="flex justify-between text-muted-foreground">
-                          <span>TVA ({taxRate}%)</span>
+                          <span>Tax ({taxRate}%)</span>
                           <span className="font-mono">{formatCurrency(tax)}</span>
                         </div>
                       )}
@@ -455,10 +455,10 @@ export function RestaurantEstablishmentView({
                     >
                       <Send className="h-5 w-5" />
                       {sending
-                        ? "Envoi…"
+                        ? "Sending…"
                         : editingOrder
-                          ? "Enregistrer les modifications"
-                          : "Envoyer au POS"}
+                          ? "Save changes"
+                          : "Send to POS"}
                     </button>
                   </div>
                 </>
@@ -492,7 +492,7 @@ export function RestaurantEstablishmentView({
           )}
         >
           <ShoppingCart className="h-4 w-4" />
-          Commande
+          Order
           {itemCount > 0 && (
             <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-foreground px-1 text-xs font-bold text-primary">
               {itemCount}
@@ -504,15 +504,15 @@ export function RestaurantEstablishmentView({
       <ConfirmDialog
         open={confirmSendOpen}
         onOpenChange={setConfirmSendOpen}
-        title="Envoyer au POS ?"
+        title="Send to POS?"
         description={
           <div className="space-y-2 text-sm">
             <p>
-              Confirmer l&apos;envoi de la commande pour{" "}
-              <strong>{toTitleCase(orderLabel.trim())}</strong> ?
+              Confirm sending the order for{" "}
+              <strong>{toTitleCase(orderLabel.trim())}</strong>?
             </p>
             <p className="text-muted-foreground">
-              {itemCount} article{itemCount !== 1 ? "s" : ""} · Total{" "}
+              {itemCount} item{itemCount !== 1 ? "s" : ""} · Total{" "}
               <span className="font-mono font-semibold text-card-foreground">
                 {formatCurrency(total)}
               </span>
@@ -520,8 +520,8 @@ export function RestaurantEstablishmentView({
           </div>
         }
         icon={<Send className="h-6 w-6" />}
-        confirmLabel="Envoyer"
-        cancelLabel="Annuler"
+        confirmLabel="Send"
+        cancelLabel="Cancel"
         variant="default"
         loading={sending}
         onConfirm={executeSubmit}

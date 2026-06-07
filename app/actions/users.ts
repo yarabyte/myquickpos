@@ -5,6 +5,9 @@ import { z } from "zod"
 import { requireTenantId, requirePermission } from "@/lib/auth"
 import { userRepository } from "@/lib/repositories/user.repository"
 import { permissionsFromFormData } from "@/lib/permissions"
+import { allowedTabletIdsFromFormData } from "@/lib/tablet-access"
+import { sendAccountCreatedEmail } from "@/lib/email/send-account-emails"
+import { tenantRepository } from "@/lib/repositories/tenant.repository"
 import type { Role } from "@prisma/client"
 
 const createUserSchema = z.object({
@@ -47,10 +50,12 @@ export async function createUser(formData: FormData): Promise<ActionResult> {
 
     const existing = await userRepository.findByEmail(parsed.data.email, tenantId)
     if (existing) {
-      return { success: false, error: "Un utilisateur avec cet email existe déjà." }
+      return { success: false, error: "A user with this email already exists." }
     }
 
+    const plainPassword = parsed.data.password
     const { permissions } = permissionsFromFormData(formData)
+    const { allowedTabletIds } = allowedTabletIdsFromFormData(formData)
     const user = await userRepository.create(
       {
         ...parsed.data,
@@ -62,9 +67,28 @@ export async function createUser(formData: FormData): Promise<ActionResult> {
             : permissions === null
               ? null
               : permissions,
+        ...(allowedTabletIds !== undefined && { allowedTabletIds }),
       },
       tenantId
     )
+
+    try {
+      const tenant = await tenantRepository.findById(tenantId)
+      if (tenant) {
+        await sendAccountCreatedEmail({
+          to: user.email,
+          name: user.name,
+          email: user.email,
+          password: plainPassword,
+          role: user.role,
+          tenantName: tenant.name,
+          tenantSlug: tenant.slug,
+        })
+      }
+    } catch (e) {
+      console.error("[createUser] welcome email failed:", e)
+    }
+
     revalidatePath("/admin/users")
     return { success: true, data: user }
   } catch (e) {
@@ -81,12 +105,14 @@ export async function updateUser(id: string, formData: FormData): Promise<Action
       return { success: false, error: parsed.error.errors.map((e) => e.message).join(", ") }
     }
     const { permissions } = permissionsFromFormData(formData)
+    const { allowedTabletIds } = allowedTabletIdsFromFormData(formData)
     await userRepository.update(
       id,
       {
         ...parsed.data,
         role: parsed.data.role as Role | undefined,
         ...(permissions !== undefined && { permissions }),
+        ...(allowedTabletIds !== undefined && { allowedTabletIds }),
       },
       tenantId
     )

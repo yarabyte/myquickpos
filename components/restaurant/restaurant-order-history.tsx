@@ -68,7 +68,7 @@ function getPresetRange(preset: DatePreset): { from?: string; to?: string } {
 }
 
 function formatTime(iso: string) {
-  return new Date(iso).toLocaleString("fr-FR", {
+  return new Date(iso).toLocaleString("en-US", {
     day: "2-digit",
     month: "2-digit",
     hour: "2-digit",
@@ -77,9 +77,9 @@ function formatTime(iso: string) {
 }
 
 const PRESETS: { id: DatePreset; label: string }[] = [
-  { id: "today", label: "Aujourd'hui" },
-  { id: "yesterday", label: "Hier" },
-  { id: "7days", label: "7 jours" },
+  { id: "today", label: "Today" },
+  { id: "yesterday", label: "Yesterday" },
+  { id: "7days", label: "7 days" },
 ]
 
 export function RestaurantOrderHistory({
@@ -158,14 +158,14 @@ export function RestaurantOrderHistory({
       <div className="flex items-center justify-between p-3 pb-2">
         <div className="flex items-center gap-2">
           <History className="h-5 w-5 text-primary" />
-          <h2 className="text-base font-semibold text-card-foreground">Historique</h2>
+          <h2 className="text-base font-semibold text-card-foreground">History</h2>
         </div>
         <button
           type="button"
           onClick={loadOrders}
           disabled={loading}
           className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors disabled:opacity-50"
-          aria-label="Actualiser"
+          aria-label="Refresh"
         >
           <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
         </button>
@@ -198,7 +198,7 @@ export function RestaurantOrderHistory({
                 : "bg-secondary text-muted-foreground hover:text-foreground"
             )}
           >
-            Personnalisé
+            Custom
           </button>
         </div>
 
@@ -206,7 +206,7 @@ export function RestaurantOrderHistory({
           <div className="flex items-center gap-2">
             <div className="flex-1 space-y-0.5">
               <label htmlFor="history-from" className="text-[10px] font-medium text-muted-foreground">
-                Du
+                From
               </label>
               <input
                 id="history-from"
@@ -218,7 +218,7 @@ export function RestaurantOrderHistory({
             </div>
             <div className="flex-1 space-y-0.5">
               <label htmlFor="history-to" className="text-[10px] font-medium text-muted-foreground">
-                Au
+                To
               </label>
               <input
                 id="history-to"
@@ -238,25 +238,25 @@ export function RestaurantOrderHistory({
           <div className="rounded-lg border border-primary/20 bg-primary/5 p-2.5">
             <div className="flex items-center gap-1 text-[10px] font-medium text-primary">
               <CheckCircle2 className="h-3 w-3" />
-              Réglées
+              Paid
             </div>
             <p className="mt-1 text-sm font-bold font-mono text-card-foreground">
               {formatCurrency(totals.settled)}
             </p>
             <p className="text-[10px] text-muted-foreground">
-              {totals.settledCount} commande{totals.settledCount !== 1 ? "s" : ""}
+              {totals.settledCount} order{totals.settledCount !== 1 ? "s" : ""}
             </p>
           </div>
           <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-2.5">
             <div className="flex items-center gap-1 text-[10px] font-medium text-amber-600 dark:text-amber-400">
               <Clock className="h-3 w-3" />
-              Non réglées
+              Unpaid
             </div>
             <p className="mt-1 text-sm font-bold font-mono text-card-foreground">
               {formatCurrency(totals.unsettled)}
             </p>
             <p className="text-[10px] text-muted-foreground">
-              {totals.unsettledCount} commande{totals.unsettledCount !== 1 ? "s" : ""}
+              {totals.unsettledCount} order{totals.unsettledCount !== 1 ? "s" : ""}
             </p>
           </div>
         </div>
@@ -266,12 +266,12 @@ export function RestaurantOrderHistory({
         {loading && orders.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
             <RefreshCw className="mb-2 h-8 w-8 animate-spin opacity-40" />
-            <p className="text-sm">Chargement…</p>
+            <p className="text-sm">Loading…</p>
           </div>
         ) : orders.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
             <History className="mb-2 h-10 w-10 opacity-30" />
-            <p className="text-sm">Aucune commande pour cette période</p>
+            <p className="text-sm">No orders for this period</p>
           </div>
         ) : (
           <div className="space-y-2 py-1">
@@ -304,12 +304,12 @@ export function RestaurantOrderHistory({
                       {isPending ? (
                         <>
                           <Clock className="h-3 w-3" />
-                          En attente
+                          Pending
                         </>
                       ) : (
                         <>
                           <CheckCircle2 className="h-3 w-3" />
-                          Réglée
+                          Paid
                         </>
                       )}
                     </span>
@@ -323,7 +323,7 @@ export function RestaurantOrderHistory({
                     ))}
                     {order.items.length > 3 && (
                       <p className="text-xs text-muted-foreground">
-                        +{order.items.length - 3} article(s)
+                        +{order.items.length - 3} item(s)
                       </p>
                     )}
                   </div>
@@ -339,7 +339,7 @@ export function RestaurantOrderHistory({
                         className="inline-flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20 transition-colors touch-manipulation"
                       >
                         <Pencil className="h-3.5 w-3.5" />
-                        Modifier
+                        Edit
                       </button>
                     )}
                   </div>

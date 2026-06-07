@@ -77,11 +77,26 @@ model User {
   tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   status    String   @default("active") // active, inactive
   permissions Json?  // custom permission keys; null = role defaults
+  allowedTabletIds Json? // establishment ids for restaurant.tablet; null = all
   createdAt DateTime @default(now())
   lastLogin DateTime?
+  passwordResetTokens PasswordResetToken[]
 
   @@unique([email, tenantId])
   @@index([tenantId])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenantId  String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model Customer {

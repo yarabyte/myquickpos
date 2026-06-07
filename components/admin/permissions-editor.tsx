@@ -9,6 +9,8 @@ import {
   PERMISSION_LABELS,
   type PermissionKey,
 } from "@/lib/permissions"
+import { userNeedsTabletScope } from "@/lib/tablet-access"
+import { TabletAccessSelector, type TabletOption } from "@/components/admin/tablet-access-selector"
 import type { Role } from "@prisma/client"
 
 interface PermissionsEditorProps {
@@ -16,6 +18,10 @@ interface PermissionsEditorProps {
   onChange: (permissions: PermissionKey[]) => void
   disabled?: boolean
   compact?: boolean
+  role?: Role | string | null
+  tablets?: TabletOption[]
+  allowedTabletIds?: string[]
+  onAllowedTabletIdsChange?: (ids: string[]) => void
 }
 
 export function PermissionsEditor({
@@ -23,6 +29,10 @@ export function PermissionsEditor({
   onChange,
   disabled = false,
   compact = false,
+  role = null,
+  tablets = [],
+  allowedTabletIds = [],
+  onAllowedTabletIdsChange,
 }: PermissionsEditorProps) {
   function toggle(key: PermissionKey, checked: boolean) {
     if (disabled) return
@@ -44,6 +54,10 @@ export function PermissionsEditor({
     onChange([...BUILTIN_ROLE_PERMISSIONS[role]])
   }
 
+  const showTabletAccess =
+    !!onAllowedTabletIdsChange &&
+    userNeedsTabletScope(value, role)
+
   return (
     <div className="space-y-3">
       {!compact && (
@@ -54,7 +68,7 @@ export function PermissionsEditor({
             onClick={selectAll}
             className="rounded-md border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
           >
-            Tout sélectionner
+            Select all
           </button>
           <button
             type="button"
@@ -62,7 +76,7 @@ export function PermissionsEditor({
             onClick={clearAll}
             className="rounded-md border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
           >
-            Tout désélectionner
+            Deselect all
           </button>
           <button
             type="button"
@@ -78,7 +92,7 @@ export function PermissionsEditor({
             onClick={() => applyRolePreset("SERVER")}
             className="rounded-md border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
           >
-            Preset Serveur
+            Server preset
           </button>
           <button
             type="button"
@@ -86,7 +100,7 @@ export function PermissionsEditor({
             onClick={() => applyRolePreset("CASHIER")}
             className="rounded-md border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
           >
-            Preset Caissier
+            Cashier preset
           </button>
         </div>
       )}
@@ -100,20 +114,29 @@ export function PermissionsEditor({
             {group.keys.map((key) => {
               const checked = value.includes(key)
               return (
-                <label
-                  key={key}
-                  className={cn(
-                    "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm cursor-pointer hover:bg-secondary/60 transition-colors",
-                    disabled && "opacity-60 cursor-not-allowed"
+                <div key={key} className="space-y-2">
+                  <label
+                    className={cn(
+                      "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm cursor-pointer hover:bg-secondary/60 transition-colors",
+                      disabled && "opacity-60 cursor-not-allowed"
+                    )}
+                  >
+                    <Checkbox
+                      checked={checked}
+                      disabled={disabled}
+                      onCheckedChange={(v) => toggle(key, v === true)}
+                    />
+                    <span className="text-card-foreground">{PERMISSION_LABELS[key]}</span>
+                  </label>
+                  {key === "restaurant.tablet" && showTabletAccess && (
+                    <TabletAccessSelector
+                      tablets={tablets}
+                      value={allowedTabletIds}
+                      onChange={onAllowedTabletIdsChange!}
+                      disabled={disabled || !checked}
+                    />
                   )}
-                >
-                  <Checkbox
-                    checked={checked}
-                    disabled={disabled}
-                    onCheckedChange={(v) => toggle(key, v === true)}
-                  />
-                  <span className="text-card-foreground">{PERMISSION_LABELS[key]}</span>
-                </label>
+                </div>
               )
             })}
           </div>
@@ -124,7 +147,7 @@ export function PermissionsEditor({
 }
 
 export function countPermissionsLabel(permissions: PermissionKey[] | null, isCustom: boolean) {
-  if (!isCustom) return "Profil du rôle"
-  if (!permissions?.length) return "Aucun droit"
-  return `${permissions.length} droit${permissions.length > 1 ? "s" : ""}`
+  if (!isCustom) return "Role profile"
+  if (!permissions?.length) return "No permissions"
+  return `${permissions.length} permission${permissions.length > 1 ? "s" : ""}`
 }

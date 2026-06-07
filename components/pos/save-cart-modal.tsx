@@ -50,11 +50,11 @@ export function SaveCartModal({
       e.preventDefault()
       const trimmed = name.trim()
       if (!trimmed) {
-        toast.error("Entrez un nom pour cette commande")
+        toast.error("Enter a name for this order")
         return
       }
       if (cart.length === 0) {
-        toast.error("Le panier est vide")
+        toast.error("Cart is empty")
         return
       }
       setSaving(true)
@@ -67,10 +67,10 @@ export function SaveCartModal({
         : await saveCart({ name: trimmed, terminalId, items })
       setSaving(false)
       if (result.success) {
-        toast.success(isUpdate ? "Commande mise à jour" : "Commande enregistrée", {
+        toast.success(isUpdate ? "Order updated" : "Order saved", {
           description: isUpdate
-            ? `"${trimmed}" a été mise à jour.`
-            : `"${trimmed}" pourra être rappelée plus tard.`,
+            ? `"${trimmed}" has been updated.`
+            : `"${trimmed}" can be recalled later.`,
         })
         setName("")
         onSaved?.()
@@ -98,12 +98,12 @@ export function SaveCartModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Save className="h-5 w-5" />
-            {isUpdate ? "Mettre à jour la commande" : "Enregistrer la commande"}
+            {isUpdate ? "Update order" : "Save order"}
           </DialogTitle>
           <DialogDescription>
             {isUpdate
-              ? "Enregistrez les modifications (articles ajoutés ou quantités changées)."
-              : "Donnez un nom à cette commande pour la rappeler plus tard sur ce terminal."}
+              ? "Save changes (added items or updated quantities)."
+              : "Give this order a name to recall it later on this terminal."}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
@@ -130,7 +130,7 @@ export function SaveCartModal({
               Cancel
             </Button>
             <Button type="submit" disabled={saving || cart.length === 0 || !name.trim()}>
-              {saving ? "Enregistrement…" : isUpdate ? "Mettre à jour" : "Enregistrer"}
+              {saving ? "Saving…" : isUpdate ? "Update" : "Save"}
             </Button>
           </div>
         </form>

@@ -51,6 +51,7 @@ interface AdminDashboardClientProps {
   categories: { roots: CategoryTree[]; selectable: { id: string; name: string; icon: string }[] }
   users: UserInfo[]
   currency?: string
+  periodLabel: string
   stats: DashboardStats
 }
 
@@ -59,6 +60,7 @@ export function AdminDashboardClient({
   categories,
   users,
   currency = "USD",
+  periodLabel,
   stats,
 }: AdminDashboardClientProps) {
   const formatCurrency = useCallback(
@@ -150,6 +152,7 @@ export function AdminDashboardClient({
               key={terminal.id}
               terminal={terminal}
               formatCurrency={formatCurrency}
+              periodLabel={periodLabel}
               onDelete={setDeleteTerminalId}
               onToggleStatus={handleToggleStatus}
               onEdit={(t) => setEditTerminal(t)}

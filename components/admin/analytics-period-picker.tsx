@@ -75,16 +75,16 @@ export function AnalyticsPeriodPicker({ value, onChange }: AnalyticsPeriodPicker
             className="h-8 gap-2 text-xs font-medium"
           >
             <CalendarIcon className="h-3.5 w-3.5" />
-            {value.preset === "custom" ? value.label : "Période personnalisée"}
+            {value.preset === "custom" ? value.label : "Custom period"}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="end">
           <div className="p-3 border-b border-border">
-            <p className="text-sm font-medium text-card-foreground">Choisir une période</p>
+            <p className="text-sm font-medium text-card-foreground">Choose a period</p>
             <p className="text-xs text-muted-foreground mt-0.5">
               {draftRange?.from && draftRange?.to
                 ? formatRangeLabel(draftRange.from, draftRange.to)
-                : "Sélectionnez une date de début et de fin"}
+                : "Select a start and end date"}
             </p>
           </div>
           <Calendar
@@ -105,7 +105,7 @@ export function AnalyticsPeriodPicker({ value, onChange }: AnalyticsPeriodPicker
                 setDraftRange({ from: today, to: today })
               }}
             >
-              Aujourd&apos;hui
+              Today
             </Button>
             <Button
               type="button"
@@ -113,7 +113,7 @@ export function AnalyticsPeriodPicker({ value, onChange }: AnalyticsPeriodPicker
               disabled={!draftRange?.from || !draftRange?.to}
               onClick={applyCustomRange}
             >
-              Appliquer
+              Apply
             </Button>
           </div>
         </PopoverContent>

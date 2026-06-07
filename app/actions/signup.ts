@@ -2,6 +2,7 @@
 
 import { tenantRepository } from "@/lib/repositories/tenant.repository"
 import { userRepository } from "@/lib/repositories/user.repository"
+import { sendWelcomeSignupEmail } from "@/lib/email/send-account-emails"
 import type { Role } from "@prisma/client"
 
 /** Slugify for server-side validation (must match client logic) */
@@ -62,6 +63,18 @@ export async function signup(data: {
       },
       tenant.id
     )
+
+    try {
+      await sendWelcomeSignupEmail({
+        to: email,
+        name: data.fullName.trim(),
+        email,
+        tenantName: tenant.name,
+        tenantSlug: tenant.slug,
+      })
+    } catch (e) {
+      console.error("[signup] welcome email failed:", e)
+    }
 
     return { ok: true, subdomain: tenant.slug }
   } catch (e) {

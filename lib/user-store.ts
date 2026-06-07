@@ -14,7 +14,7 @@ const DEFAULT_USERS: User[] = [
   {
     id: "user-01",
     name: "Admin",
-    email: "admin@myquickpos.com",
+    email: "admin@myquickpos.app",
     password: "admin",
     role: "manager",
     assignedTerminals: [],
@@ -25,7 +25,7 @@ const DEFAULT_USERS: User[] = [
   {
     id: "user-02",
     name: "Alex Johnson",
-    email: "alex@myquickpos.com",
+    email: "alex@myquickpos.app",
     password: "cashier",
     role: "pos_user",
     assignedTerminals: ["terminal-01"],
@@ -36,7 +36,7 @@ const DEFAULT_USERS: User[] = [
   {
     id: "user-03",
     name: "Maria Garcia",
-    email: "maria@myquickpos.com",
+    email: "maria@myquickpos.app",
     password: "cashier",
     role: "pos_user",
     assignedTerminals: ["terminal-02"],
@@ -47,7 +47,7 @@ const DEFAULT_USERS: User[] = [
   {
     id: "user-04",
     name: "James Lee",
-    email: "james@myquickpos.com",
+    email: "james@myquickpos.app",
     password: "cashier",
     role: "pos_user",
     assignedTerminals: ["terminal-01", "terminal-03"],
@@ -58,7 +58,7 @@ const DEFAULT_USERS: User[] = [
   {
     id: "user-05",
     name: "Sarah Miller",
-    email: "sarah@myquickpos.com",
+    email: "sarah@myquickpos.app",
     password: "manager",
     role: "manager",
     assignedTerminals: [],

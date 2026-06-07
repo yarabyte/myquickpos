@@ -59,9 +59,9 @@ type PaymentStep = "customer" | "method" | "processing" | "complete"
 const paymentMethods = [
   {
     id: "cash" as const,
-    label: "Espèces",
+    label: "Cash",
     icon: Banknote,
-    description: "Montant et monnaie",
+    description: "Amount and change",
   },
   {
     id: "mtn" as const,
@@ -197,7 +197,7 @@ export function PaymentModal({
   const changeDue = cashValue - total
 
   const methodLabel =
-    method === "cash" ? "Espèces" : method === "mtn" ? "MTN Money" : "Orange Money"
+    method === "cash" ? "Cash" : method === "mtn" ? "MTN Money" : "Orange Money"
 
   const getTierColor = (tier: string) => {
     switch (tier) {
@@ -377,7 +377,7 @@ export function PaymentModal({
                   <Separator />
                   <div>
                     <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                      Montant perçu
+                      Amount received
                     </label>
                     <input
                       type="number"
@@ -392,7 +392,7 @@ export function PaymentModal({
 
                   {cashValue >= total && (
                     <div className="rounded-xl bg-primary/10 p-3 text-center">
-                      <p className="text-sm text-muted-foreground">Reste à remettre au client</p>
+                      <p className="text-sm text-muted-foreground">Change due</p>
                       <p className="text-2xl font-bold text-primary font-mono">
                         {formatCurrency(changeDue)}
                       </p>
@@ -401,7 +401,7 @@ export function PaymentModal({
 
                   {cashAmount && cashValue < total && (
                     <p className="text-xs text-destructive text-center">
-                      Montant insuffisant (manque {formatCurrency(total - cashValue)})
+                      Insufficient amount (short {formatCurrency(total - cashValue)})
                     </p>
                   )}
 
@@ -415,7 +415,7 @@ export function PaymentModal({
                         : "bg-muted text-muted-foreground cursor-not-allowed"
                     )}
                   >
-                    Régler
+                    Pay
                   </button>
                 </>
               )}
@@ -425,7 +425,7 @@ export function PaymentModal({
                   onClick={handleMobilePayment}
                   className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 text-base font-bold text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98] touch-manipulation select-none"
                 >
-                  Régler via {methodLabel}
+                  Pay via {methodLabel}
                 </button>
               )}
             </div>
@@ -454,7 +454,7 @@ export function PaymentModal({
                 </p>
                 {method === "cash" && changeDue > 0 && (
                   <p className="text-sm font-semibold text-primary mt-1 font-mono">
-                    Monnaie : {formatCurrency(changeDue)}
+                    Change: {formatCurrency(changeDue)}
                   </p>
                 )}
               </div>

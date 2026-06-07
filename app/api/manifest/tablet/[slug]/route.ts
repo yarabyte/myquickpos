@@ -11,7 +11,7 @@ export async function GET(
   const manifest = {
     name: "MyQuickPOS - Tablet",
     short_name: "MyQuickPOS",
-    description: "Tablette de commande - Point de vente",
+    description: "Ordering tablet - Point of sale",
     start_url: `${origin}/restaurant/${encodeURIComponent(decoded)}`,
     scope: `${origin}/restaurant/`,
     display: "standalone",
@@ -20,15 +20,15 @@ export async function GET(
     theme_color: "#0f1117",
     icons: [
       {
-        src: "/icons/icon-192x192.jpg",
+        src: "/icons/icon-192x192.png",
         sizes: "192x192",
-        type: "image/jpeg",
+        type: "image/png",
         purpose: "any",
       },
       {
-        src: "/icons/icon-512x512.jpg",
+        src: "/icons/icon-512x512.png",
         sizes: "512x512",
-        type: "image/jpeg",
+        type: "image/png",
         purpose: "any",
       },
     ],

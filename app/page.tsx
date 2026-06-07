@@ -753,7 +753,7 @@ export default function HomePage() {
                 </li>
                 <li>
                   <a
-                    href="mailto:support@myquickpos.com"
+                    href="mailto:support@myquickpos.app"
                     className="inline-block text-sm text-muted-foreground transition-all duration-300 hover:translate-x-1 hover:text-foreground"
                   >
                     Contact

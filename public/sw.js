@@ -1,11 +1,12 @@
-const CACHE_NAME = "myquickpos-v3";
+const CACHE_NAME = "myquickpos-v5";
 
 const PRECACHE_URLS = [
   "/login",
   "/admin",
   "/admin/tablet",
-  "/icons/icon-192x192.jpg",
-  "/icons/icon-512x512.jpg",
+  "/icons/icon-192x192.png",
+  "/icons/icon-512x512.png",
+  "/icons/apple-touch-icon.png",
 ];
 // GET requests to /restaurant/* are cached on first visit by the fetch handler (PWA tablet install).
 

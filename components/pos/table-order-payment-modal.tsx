@@ -60,7 +60,7 @@ function tableOrderToCart(order: PendingTableOrder): CartItem[] {
 }
 
 const paymentOptions = [
-  { id: "Cash", label: "Espèces", icon: Banknote },
+  { id: "Cash", label: "Cash", icon: Banknote },
   { id: "MTN Money", label: "MTN Money", icon: Smartphone },
   { id: "Orange Money", label: "Orange Money", icon: Smartphone },
 ]
@@ -85,7 +85,7 @@ export function TableOrderPaymentModal({
   const [submitting, setSubmitting] = useState(false)
   const [showReceipt, setShowReceipt] = useState(false)
   const [receiptCart, setReceiptCart] = useState<CartItem[]>([])
-  const [receiptPaymentMethod, setReceiptPaymentMethod] = useState("Espèces")
+  const [receiptPaymentMethod, setReceiptPaymentMethod] = useState("Cash")
   const [receiptOrderNumber, setReceiptOrderNumber] = useState<string>()
 
   useEffect(() => {
@@ -104,8 +104,8 @@ export function TableOrderPaymentModal({
   const handleComplete = async () => {
     if (!order) return
     if (isCash && receivedAmount < total) {
-      toast.error("Montant insuffisant", {
-        description: "Le montant perçu doit être au moins égal au total.",
+      toast.error("Insufficient amount", {
+        description: "Amount received must be at least equal to the total.",
       })
       return
     }
@@ -123,7 +123,7 @@ export function TableOrderPaymentModal({
       setReceiptPaymentMethod(methodLabel)
       setReceiptOrderNumber(order.orderNumber)
       setShowReceipt(true)
-      toast.success("Commande réglée", { description: `${order.orderNumber} enregistrée.` })
+      toast.success("Order paid", { description: `${order.orderNumber} recorded.` })
       onClose()
       onCompleted?.()
       router.refresh()
@@ -139,7 +139,7 @@ export function TableOrderPaymentModal({
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-h-[90vh] flex flex-col max-w-md">
         <DialogHeader>
-          <DialogTitle>Régler la commande table</DialogTitle>
+          <DialogTitle>Pay table order</DialogTitle>
         </DialogHeader>
         {order && (
           <>
@@ -148,7 +148,7 @@ export function TableOrderPaymentModal({
                 {order.orderNumber} — {label}
               </p>
               <p className="text-muted-foreground">
-                {new Date(order.createdAt).toLocaleTimeString("fr-FR", {
+                {new Date(order.createdAt).toLocaleTimeString("en-US", {
                   hour: "2-digit",
                   minute: "2-digit",
                 })}
@@ -161,7 +161,7 @@ export function TableOrderPaymentModal({
             <Separator />
             <div className="space-y-2">
               <label className="text-sm font-medium text-muted-foreground">
-                Mode de paiement
+                Payment method
               </label>
               <div className="space-y-2">
                 {paymentOptions
@@ -209,7 +209,7 @@ export function TableOrderPaymentModal({
               <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-3">
                 <div className="space-y-1.5">
                   <label htmlFor="cash-received" className="text-sm font-medium text-muted-foreground">
-                    Montant perçu
+                    Amount received
                   </label>
                   <Input
                     id="cash-received"
@@ -224,7 +224,7 @@ export function TableOrderPaymentModal({
                 </div>
                 {receivedAmount >= total && (
                   <div className="rounded-lg bg-primary/10 px-3 py-2.5 text-center">
-                    <p className="text-xs text-muted-foreground">Reste à remettre au client</p>
+                    <p className="text-xs text-muted-foreground">Change due</p>
                     <p className="text-xl font-bold text-primary font-mono">
                       {formatCurrency(changeDue)}
                     </p>
@@ -232,7 +232,7 @@ export function TableOrderPaymentModal({
                 )}
                 {cashReceived && receivedAmount < total && (
                   <p className="text-xs text-destructive text-center">
-                    Montant insuffisant (manque {formatCurrency(total - receivedAmount)})
+                    Insufficient amount (short {formatCurrency(total - receivedAmount)})
                   </p>
                 )}
               </div>
@@ -246,10 +246,10 @@ export function TableOrderPaymentModal({
               {submitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Enregistrement…
+                  Saving…
                 </>
               ) : (
-                "Régler"
+                "Pay"
               )}
             </Button>
           </>
@@ -271,7 +271,7 @@ export function TableOrderPaymentModal({
       currency={currency}
       paymentMethod={receiptPaymentMethod}
       terminalName={terminalName}
-      cashierName={currentUserName.trim() || "Caissier"}
+        cashierName={currentUserName.trim() || "Cashier"}
       orderNumber={receiptOrderNumber}
       printerConfig={
         printerConfig

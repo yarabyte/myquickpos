@@ -73,7 +73,7 @@ export function OrderPanel({
           <div>
             <p className="text-xs font-semibold text-primary">{recalledOrderName}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Commande rappelée — ajoutez des articles depuis le catalogue
+              Recalled order — add items from the catalog
             </p>
           </div>
           {onUpdateSavedOrder && (
@@ -83,7 +83,7 @@ export function OrderPanel({
               disabled={isUpdatingSavedOrder}
               className="w-full rounded-lg border border-primary/40 bg-background px-3 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/10 disabled:opacity-50 touch-manipulation"
             >
-              {isUpdatingSavedOrder ? "Mise à jour…" : "Mettre à jour la commande sauvegardée"}
+              {isUpdatingSavedOrder ? "Updating…" : "Update saved order"}
             </button>
           )}
         </div>

@@ -31,7 +31,7 @@ export async function createEstablishment(formData: FormData): Promise<ActionRes
     revalidatePath("/pos")
     return { success: true, data: establishment }
   } catch (e) {
-    return { success: false, error: e instanceof Error ? e.message : "Failed to create establishment" }
+    return { success: false, error: e instanceof Error ? e.message : "Failed to create tablet" }
   }
 }
 
@@ -48,7 +48,7 @@ export async function updateEstablishment(id: string, formData: FormData): Promi
     revalidatePath("/pos")
     return { success: true, data: null }
   } catch (e) {
-    return { success: false, error: e instanceof Error ? e.message : "Failed to update establishment" }
+    return { success: false, error: e instanceof Error ? e.message : "Failed to update tablet" }
   }
 }
 
@@ -61,6 +61,6 @@ export async function deleteEstablishment(id: string): Promise<ActionResult> {
     revalidatePath("/pos")
     return { success: true, data: null }
   } catch (e) {
-    return { success: false, error: e instanceof Error ? e.message : "Failed to delete establishment" }
+    return { success: false, error: e instanceof Error ? e.message : "Failed to delete tablet" }
   }
 }

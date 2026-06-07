@@ -95,7 +95,7 @@ export function ReceiptPreviewModal({
       await printReceiptElement(receiptRef.current)
       setPrinted(true)
     } catch {
-      toast.error("Impossible d'imprimer le ticket")
+      toast.error("Unable to print receipt")
     } finally {
       setPrinting(false)
     }
@@ -148,16 +148,16 @@ export function ReceiptPreviewModal({
               <p className="font-bold uppercase tracking-wide">{orderNo}</p>
               <p>{dateStr} · {timeStr}</p>
               <p className="font-medium">Terminal: {terminalName}</p>
-              <p className="font-medium">Caissier: {cashierName}</p>
+              <p className="font-medium">Cashier: {cashierName}</p>
             </div>
 
             <hr className="receipt-separator-dashed" />
 
             {/* Colonnes articles */}
             <div className="receipt-line font-bold uppercase tracking-wide text-[0.9em] mb-1">
-              <span className="receipt-col-name">Article</span>
-              <span className="receipt-col-qty">Qté</span>
-              <span className="receipt-col-amount">Montant</span>
+              <span className="receipt-col-name">Item</span>
+              <span className="receipt-col-qty">Qty</span>
+              <span className="receipt-col-amount">Amount</span>
             </div>
 
             <div className="space-y-0.5 mb-2">
@@ -174,7 +174,7 @@ export function ReceiptPreviewModal({
 
             {cart.length === 0 && (
               <div className="text-center text-gray-500 py-2 text-[0.9em]">
-                Aucun article
+                No items
               </div>
             )}
 
@@ -183,17 +183,17 @@ export function ReceiptPreviewModal({
             {/* Totaux */}
             <div className="space-y-0.5 text-[0.95em]">
               <div className="receipt-row">
-                <span>Sous-total ({itemCount} art.)</span>
+                <span>Subtotal ({itemCount} items)</span>
                 <span>{formatCurrency(subtotal)}</span>
               </div>
               {(taxRate ?? 0) > 0 ? (
                 <div className="receipt-row">
-                  <span>TVA ({taxRate}%)</span>
+                  <span>Tax ({taxRate}%)</span>
                   <span>{formatCurrency(tax)}</span>
                 </div>
               ) : (
                 <div className="receipt-row">
-                  <span>TVA</span>
+                  <span>Tax</span>
                   <span>—</span>
                 </div>
               )}
@@ -207,7 +207,7 @@ export function ReceiptPreviewModal({
             <hr className="receipt-separator-dashed" />
 
             <div className="receipt-row text-[0.95em]">
-              <span>Paiement</span>
+              <span>Payment</span>
               <span className="font-semibold">{paymentMethod}</span>
             </div>
 
@@ -229,7 +229,7 @@ export function ReceiptPreviewModal({
           {printed ? (
             <div className="flex flex-1 items-center justify-center gap-2 text-sm font-medium text-primary py-3">
               <CheckCircle2 className="h-4 w-4" />
-              Envoyé à l&apos;imprimante
+              Sent to printer
             </div>
           ) : (
             <button
@@ -245,12 +245,12 @@ export function ReceiptPreviewModal({
               {printing ? (
                 <>
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground" />
-                  Impression…
+                  Printing…
                 </>
               ) : (
                 <>
                   <Printer className="h-4 w-4" />
-                  Imprimer ticket (thermal)
+                  Print receipt (thermal)
                 </>
               )}
             </button>
@@ -260,7 +260,7 @@ export function ReceiptPreviewModal({
             className="flex items-center justify-center rounded-xl border border-border px-5 py-3 text-sm font-medium text-muted-foreground hover:bg-secondary transition-colors touch-manipulation select-none"
           >
             <X className="h-4 w-4 mr-1.5" />
-            Fermer
+            Close
           </button>
         </div>
       </DialogContent>

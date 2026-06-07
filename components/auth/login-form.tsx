@@ -187,7 +187,7 @@ export function LoginForm({ tenants }: LoginFormProps) {
           {tenants.length > 0 && (
             <div className="flex flex-col gap-2">
               <Label htmlFor="tenant" className="text-foreground">
-                Tenant
+                Choose an establishment
               </Label>
               <Select
                 modal={false}
@@ -200,7 +200,7 @@ export function LoginForm({ tenants }: LoginFormProps) {
                   id="tenant"
                   className="h-11 bg-card text-card-foreground"
                 >
-                  <SelectValue placeholder="Select a tenant" />
+                  <SelectValue placeholder="Select an establishment" />
                 </SelectTrigger>
                 <SelectContent>
                   {tenants.map((tenant) => (
@@ -220,7 +220,7 @@ export function LoginForm({ tenants }: LoginFormProps) {
             <Input
               id="email"
               type="email"
-              placeholder="admin@myquickpos.com"
+              placeholder="admin@myquickpos.app"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -234,12 +234,12 @@ export function LoginForm({ tenants }: LoginFormProps) {
               <Label htmlFor="password" className="text-foreground">
                 Password
               </Label>
-              <button
-                type="button"
+              <Link
+                href={`/forgot-password${tenantSlug ? `?tenantSlug=${encodeURIComponent(tenantSlug)}` : ""}`}
                 className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
               >
                 Forgot password?
-              </button>
+              </Link>
             </div>
             <div className="relative">
               <Input
@@ -302,12 +302,12 @@ export function LoginForm({ tenants }: LoginFormProps) {
 
         {/* Footer text */}
         <p className="mt-8 text-center text-xs text-muted-foreground">
-          {"Vous n'avez pas de compte ? "}
+          {"Don't have an account? "}
           <Link
             href="/signup"
             className="font-medium text-primary hover:text-primary/80 transition-colors"
           >
-            Créer un compte
+            Create an account
           </Link>
         </p>
       </div>

@@ -23,7 +23,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             size="icon"
             className="shrink-0"
             onClick={() => setMobileOpen(true)}
-            aria-label="Ouvrir le menu"
+            aria-label="Open menu"
           >
             <Menu className="h-5 w-5" />
           </Button>
@@ -40,7 +40,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
         <SheetContent side="left" className="w-[min(100vw-2rem,18rem)] p-0 [&>button]:hidden">
-          <SheetTitle className="sr-only">Navigation admin</SheetTitle>
+          <SheetTitle className="sr-only">Admin navigation</SheetTitle>
           <AdminSidebar
             className="h-full w-full border-0"
             onNavigate={() => setMobileOpen(false)}

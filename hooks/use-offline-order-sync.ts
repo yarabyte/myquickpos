@@ -38,8 +38,8 @@ export function useOfflineOrderSync(establishmentSlug: string) {
     refreshCount()
 
     if (sent > 0) {
-      toast.success(`${sent} commande${sent > 1 ? "s" : ""} envoyée${sent > 1 ? "s" : ""}`, {
-        description: "Synchronisation après reconnexion réussie.",
+      toast.success(`${sent} order${sent > 1 ? "s" : ""} sent`, {
+        description: "Reconnection sync successful.",
       })
     }
   }, [establishmentSlug, syncing, refreshCount])
@@ -60,8 +60,8 @@ export function useOfflineOrderSync(establishmentSlug: string) {
   async function queueOrder(payload: QueuedEstablishmentOrder["payload"]) {
     enqueueEstablishmentOrder(payload)
     refreshCount()
-    toast.info("Commande en attente", {
-      description: "Sera envoyée automatiquement dès que la connexion revient.",
+    toast.info("Order pending", {
+      description: "Will be sent automatically when the connection returns.",
     })
   }
 

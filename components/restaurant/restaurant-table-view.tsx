@@ -98,7 +98,7 @@ export function RestaurantTableView({
 
   const handleSendToPos = useCallback(async () => {
     if (cart.length === 0) {
-      toast.error("Panier vide", { description: "Ajoutez au moins un article." })
+      toast.error("Empty cart", { description: "Add at least one item." })
       return
     }
     setSending(true)
@@ -119,8 +119,8 @@ export function RestaurantTableView({
     setSending(false)
     if (result.success) {
       setCart([])
-      toast.success("Commande envoyée au POS", {
-        description: `Commande ${result.data.orderNumber} en attente.`,
+      toast.success("Order sent to POS", {
+        description: `Order ${result.data.orderNumber} pending.`,
       })
     } else {
       toast.error(result.error)
@@ -152,7 +152,7 @@ export function RestaurantTableView({
             />
             {filteredProducts.length === 0 && (
               <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-                <p className="text-sm">Aucun produit</p>
+                <p className="text-sm">No products</p>
               </div>
             )}
           </ScrollArea>
@@ -164,7 +164,7 @@ export function RestaurantTableView({
             <div className="flex items-center justify-between p-3">
               <div className="flex items-center gap-2">
                 <ShoppingCart className="h-5 w-5 text-primary" />
-                <h2 className="text-base font-semibold text-card-foreground">Commande</h2>
+                <h2 className="text-base font-semibold text-card-foreground">Order</h2>
                 {cart.length > 0 && (
                   <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-bold text-primary-foreground">
                     {cart.reduce((s, i) => s + i.quantity, 0)}
@@ -177,7 +177,7 @@ export function RestaurantTableView({
                   onClick={clearCart}
                   className="text-xs font-medium text-destructive hover:text-destructive/80"
                 >
-                  Tout vider
+                  Clear all
                 </button>
               )}
             </div>
@@ -186,8 +186,8 @@ export function RestaurantTableView({
               {cart.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
                   <ShoppingCart className="mb-2 h-10 w-10 opacity-30" />
-                  <p className="text-sm">Aucun article</p>
-                  <p className="text-xs">Touchez un produit pour l&apos;ajouter</p>
+                  <p className="text-sm">No items</p>
+                  <p className="text-xs">Tap a product to add it</p>
                 </div>
               ) : (
                 <div className="space-y-2 py-2">
@@ -240,7 +240,7 @@ export function RestaurantTableView({
                 <div className="space-y-3 p-3">
                   <div className="space-y-1.5">
                     <label htmlFor="order-label" className="text-xs font-medium text-muted-foreground">
-                      Nom de la table ou du client
+                      Table or customer name
                     </label>
                     <input
                       id="order-label"
@@ -253,12 +253,12 @@ export function RestaurantTableView({
                   </div>
                   <div className="space-y-1 text-sm">
                     <div className="flex justify-between text-muted-foreground">
-                      <span>Sous-total</span>
+                      <span>Subtotal</span>
                       <span className="font-mono">{formatCurrency(subtotal)}</span>
                     </div>
                     {taxRate > 0 && (
                       <div className="flex justify-between text-muted-foreground">
-                        <span>TVA ({taxRate}%)</span>
+                        <span>Tax ({taxRate}%)</span>
                         <span className="font-mono">{formatCurrency(tax)}</span>
                       </div>
                     )}
@@ -275,7 +275,7 @@ export function RestaurantTableView({
                     className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 text-base font-bold text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98] disabled:opacity-70 touch-manipulation"
                   >
                     <Send className="h-5 w-5" />
-                    {sending ? "Envoi…" : "Envoyer au POS"}
+                    {sending ? "Sending…" : "Send to POS"}
                   </button>
                 </div>
               </>

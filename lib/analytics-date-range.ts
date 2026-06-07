@@ -12,7 +12,7 @@ import {
   eachDayOfInterval,
   eachMonthOfInterval,
 } from "date-fns"
-import { fr } from "date-fns/locale"
+import { enUS } from "date-fns/locale"
 
 export type AnalyticsPeriodPreset =
   | "today"
@@ -37,14 +37,18 @@ export const ANALYTICS_PERIOD_PRESETS: {
   id: AnalyticsPeriodPreset
   label: string
 }[] = [
-  { id: "today", label: "Aujourd'hui" },
-  { id: "yesterday", label: "Hier" },
-  { id: "last7", label: "7 jours" },
-  { id: "last30", label: "30 jours" },
-  { id: "thisMonth", label: "Ce mois" },
-  { id: "lastMonth", label: "Mois dernier" },
-  { id: "thisYear", label: "Cette année" },
+  { id: "today", label: "Today" },
+  { id: "yesterday", label: "Yesterday" },
+  { id: "last7", label: "7 days" },
+  { id: "last30", label: "30 days" },
+  { id: "thisMonth", label: "This month" },
+  { id: "lastMonth", label: "Last month" },
+  { id: "thisYear", label: "This year" },
 ]
+
+export function getCurrentMonthLabel(date = new Date()): string {
+  return date.toLocaleDateString("en-US", { month: "long", year: "numeric" })
+}
 
 export function toDateParam(date: Date): string {
   const y = date.getFullYear()
@@ -60,13 +64,13 @@ export function parseDateParam(value: string): Date {
 export function formatRangeLabel(from: Date, to: Date): string {
   const sameDay = toDateParam(from) === toDateParam(to)
   if (sameDay) {
-    return format(from, "d MMM yyyy", { locale: fr })
+    return format(from, "d MMM yyyy", { locale: enUS })
   }
   const sameYear = from.getFullYear() === to.getFullYear()
   if (sameYear) {
-    return `${format(from, "d MMM", { locale: fr })} – ${format(to, "d MMM yyyy", { locale: fr })}`
+    return `${format(from, "d MMM", { locale: enUS })} – ${format(to, "d MMM yyyy", { locale: enUS })}`
   }
-  return `${format(from, "d MMM yyyy", { locale: fr })} – ${format(to, "d MMM yyyy", { locale: fr })}`
+  return `${format(from, "d MMM yyyy", { locale: enUS })} – ${format(to, "d MMM yyyy", { locale: enUS })}`
 }
 
 export function getChartGranularity(from: Date, to: Date): ChartGranularity {
@@ -84,7 +88,7 @@ export function getPresetRange(preset: AnalyticsPeriodPreset): AnalyticsDateRang
         from: startOfDay(now),
         to: endOfDay(now),
         preset,
-        label: "Aujourd'hui",
+        label: "Today",
       }
     case "yesterday": {
       const day = subDays(now, 1)
@@ -92,7 +96,7 @@ export function getPresetRange(preset: AnalyticsPeriodPreset): AnalyticsDateRang
         from: startOfDay(day),
         to: endOfDay(day),
         preset,
-        label: "Hier",
+        label: "Yesterday",
       }
     }
     case "last7": {
@@ -101,7 +105,7 @@ export function getPresetRange(preset: AnalyticsPeriodPreset): AnalyticsDateRang
         from,
         to: endOfDay(now),
         preset,
-        label: "7 jours",
+        label: "7 days",
       }
     }
     case "last30": {
@@ -110,7 +114,7 @@ export function getPresetRange(preset: AnalyticsPeriodPreset): AnalyticsDateRang
         from,
         to: endOfDay(now),
         preset,
-        label: "30 jours",
+        label: "30 days",
       }
     }
     case "thisMonth":
@@ -118,7 +122,7 @@ export function getPresetRange(preset: AnalyticsPeriodPreset): AnalyticsDateRang
         from: startOfMonth(now),
         to: endOfDay(now),
         preset,
-        label: "Ce mois",
+        label: "This month",
       }
     case "lastMonth": {
       const prev = subMonths(now, 1)
@@ -126,7 +130,7 @@ export function getPresetRange(preset: AnalyticsPeriodPreset): AnalyticsDateRang
         from: startOfMonth(prev),
         to: endOfMonth(prev),
         preset,
-        label: "Mois dernier",
+        label: "Last month",
       }
     }
     case "thisYear":
@@ -134,7 +138,7 @@ export function getPresetRange(preset: AnalyticsPeriodPreset): AnalyticsDateRang
         from: startOfYear(now),
         to: endOfDay(now),
         preset,
-        label: "Cette année",
+        label: "This year",
       }
     default:
       return getPresetRange("last30")

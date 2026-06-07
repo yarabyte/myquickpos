@@ -6,25 +6,27 @@ import { categoryRepository } from "@/lib/repositories/category.repository"
 import { userRepository } from "@/lib/repositories/user.repository"
 import { analyticsRepository } from "@/lib/repositories/analytics.repository"
 import { tenantRepository } from "@/lib/repositories/tenant.repository"
+import { getCurrentMonthLabel } from "@/lib/analytics-date-range"
 import { TerminalsPageClient } from "./terminals-page-client"
 
 export default async function TerminalsPage() {
   const tenantId = await getTenantId()
   if (!tenantId) redirect("/login")
 
-  const [terminals, stores, categories, users, todayByTerminal, tenantSettings] = await Promise.all([
+  const [terminals, stores, categories, users, monthByTerminal, tenantSettings] = await Promise.all([
     terminalRepository.findAll(tenantId),
     storeRepository.findAll(tenantId),
     categoryRepository.getRootCategories(tenantId),
     userRepository.findAll(tenantId),
-    analyticsRepository.todayStatsByTerminal(tenantId),
+    analyticsRepository.monthStatsByTerminal(tenantId),
     tenantRepository.getSettings(tenantId),
   ])
   const currency = tenantSettings?.currency ?? "USD"
-  const todayMap = new Map(todayByTerminal.map((s) => [s.terminalId, { revenue: s.revenue, orders: s.orders }]))
+  const monthLabel = getCurrentMonthLabel()
+  const monthMap = new Map(monthByTerminal.map((s) => [s.terminalId, { revenue: s.revenue, orders: s.orders }]))
   const terminalList = terminals.map((t) => {
     const settings = (t.settings as { assignedCategories?: string[]; cashier?: string; taxRate?: number }) ?? {}
-    const today = todayMap.get(t.id) ?? { revenue: 0, orders: 0 }
+    const month = monthMap.get(t.id) ?? { revenue: 0, orders: 0 }
     return {
       id: t.id,
       name: t.name,
@@ -34,8 +36,8 @@ export default async function TerminalsPage() {
       cashier: settings.cashier ?? "Unassigned",
       taxRate: settings.taxRate ?? 0,
       assignedCategories: settings.assignedCategories ?? [],
-      todaySales: today.revenue,
-      todayOrders: today.orders,
+      todaySales: month.revenue,
+      todayOrders: month.orders,
       storeId: t.storeId ?? undefined,
       storeName: t.store?.name ?? undefined,
     }
@@ -66,6 +68,7 @@ export default async function TerminalsPage() {
       categories={{ roots, selectable }}
       users={usersList}
       currency={currency}
+      periodLabel={monthLabel}
     />
   )
 }

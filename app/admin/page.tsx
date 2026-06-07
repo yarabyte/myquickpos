@@ -5,27 +5,29 @@ import { categoryRepository } from "@/lib/repositories/category.repository"
 import { userRepository } from "@/lib/repositories/user.repository"
 import { analyticsRepository } from "@/lib/repositories/analytics.repository"
 import { tenantRepository } from "@/lib/repositories/tenant.repository"
+import { getCurrentMonthLabel } from "@/lib/analytics-date-range"
 import { AdminDashboardClient } from "./admin-dashboard-client"
 
 export default async function AdminDashboard() {
   const tenantId = await getTenantId()
   if (!tenantId) redirect("/login")
 
-  const [terminals, categories, users, stats, todayByTerminal, tenantSettings] = await Promise.all([
+  const [terminals, categories, users, stats, monthByTerminal, tenantSettings] = await Promise.all([
     terminalRepository.findAll(tenantId),
     categoryRepository.getRootCategories(tenantId),
     userRepository.findAll(tenantId),
     analyticsRepository.dashboardSummary(tenantId),
-    analyticsRepository.todayStatsByTerminal(tenantId),
+    analyticsRepository.monthStatsByTerminal(tenantId),
     tenantRepository.getSettings(tenantId),
   ])
   const currency = tenantSettings?.currency ?? "USD"
+  const monthLabel = getCurrentMonthLabel()
 
-  const todayMap = new Map(todayByTerminal.map((s) => [s.terminalId, { revenue: s.revenue, orders: s.orders }]))
+  const monthMap = new Map(monthByTerminal.map((s) => [s.terminalId, { revenue: s.revenue, orders: s.orders }]))
 
   const terminalList = terminals.map((t) => {
     const settings = (t.settings as { assignedCategories?: string[] }) ?? {}
-    const today = todayMap.get(t.id) ?? { revenue: 0, orders: 0 }
+    const month = monthMap.get(t.id) ?? { revenue: 0, orders: 0 }
     return {
       id: t.id,
       name: t.name,
@@ -34,8 +36,8 @@ export default async function AdminDashboard() {
       status: t.isActive ? ("online" as const) : ("offline" as const),
       cashier: "Unassigned",
       assignedCategories: settings.assignedCategories ?? [],
-      todaySales: today.revenue,
-      todayOrders: today.orders,
+      todaySales: month.revenue,
+      todayOrders: month.orders,
     }
   })
 
@@ -62,6 +64,7 @@ export default async function AdminDashboard() {
       categories={{ roots, selectable }}
       users={usersList}
       currency={currency}
+      periodLabel={monthLabel}
       stats={{
         revenue: Number(stats.revenue) || 0,
         totalOrders: Number(stats.totalOrders) || 0,

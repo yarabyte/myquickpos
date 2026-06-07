@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 import { establishmentRepository } from "@/lib/repositories/establishment.repository"
 import { productRepository } from "@/lib/repositories/product.repository"
 import { categoryRepository } from "@/lib/repositories/category.repository"
@@ -10,6 +10,9 @@ import {
   expandCategoryIds,
   filterProductsByAssignedCategories,
 } from "@/lib/category-tree"
+import { auth } from "@/auth"
+import { sessionPermissionsFromUser, type PermissionKey } from "@/lib/permissions"
+import { canAccessTabletById } from "@/lib/tablet-access"
 
 export default async function RestaurantEstablishmentPage({
   params,
@@ -23,6 +26,27 @@ export default async function RestaurantEstablishmentPage({
   if (!resolved) notFound()
 
   const { establishment, terminal, tenantId } = resolved
+
+  const session = await auth()
+  const sessionUser = session?.user as
+    | { permissions?: string[]; role?: string; allowedTabletIds?: string[] | null }
+    | undefined
+  if (sessionUser) {
+    const permissions = sessionPermissionsFromUser({
+      permissions: sessionUser.permissions as PermissionKey[] | undefined,
+      role: sessionUser.role,
+    })
+    const allowed = canAccessTabletById(
+      establishment.id,
+      sessionUser.allowedTabletIds ?? null,
+      permissions,
+      sessionUser.role
+    )
+    if (!allowed) {
+      redirect("/admin/tablet")
+    }
+  }
+
   const settings = (terminal.settings as { assignedCategories?: string[]; taxRate?: number }) ?? {}
   const assignedCategories = settings.assignedCategories ?? []
   const taxRate = settings.taxRate ?? 0

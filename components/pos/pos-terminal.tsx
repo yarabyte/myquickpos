@@ -13,11 +13,17 @@ import { QuickActions } from "./quick-actions"
 import { ReceiptPreviewModal } from "./receipt-preview-modal"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { toast } from "sonner"
+import { ShoppingCart } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { formatWithCurrency } from "@/lib/format-currency"
+
+type MobileView = "products" | "order"
 
 export function PosTerminal() {
   const { products: allProducts } = useProducts()
   const { getDescendantIds } = useCategories()
   const [activeCategory, setActiveCategory] = useState("all")
+  const [mobileView, setMobileView] = useState<MobileView>("products")
   const [searchQuery, setSearchQuery] = useState("")
   const [cart, setCart] = useState<CartItem[]>([])
   const [paymentOpen, setPaymentOpen] = useState(false)
@@ -103,21 +109,40 @@ export function PosTerminal() {
     }
   }, [lastCart.length])
 
+  const formatCurrency = useCallback(
+    (amount: number) => formatWithCurrency(amount, "USD"),
+    []
+  )
+
+  const itemCount = useMemo(
+    () => cart.reduce((sum, item) => sum + item.quantity, 0),
+    [cart]
+  )
+
   return (
-    <div className="flex h-screen flex-col overflow-hidden">
+    <div className="flex h-dvh flex-col overflow-hidden">
       <PosHeader onSearch={setSearchQuery} />
 
-      <div className="flex flex-1 overflow-hidden">
-        <div className="flex flex-1 flex-col overflow-hidden">
-          <div className="px-5 pt-4 pb-3">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
+        <div
+          className={cn(
+            "flex min-h-0 flex-1 flex-col overflow-hidden",
+            mobileView !== "products" && "hidden lg:flex"
+          )}
+        >
+          <div className="px-4 pt-3 pb-2 lg:px-5 lg:pt-4 lg:pb-3">
             <CategoryBar
               activeCategory={activeCategory}
               onCategoryChange={setActiveCategory}
             />
           </div>
 
-          <ScrollArea className="flex-1 px-5 pb-5">
-            <ProductGrid products={filteredProducts} onAddToCart={addToCart} />
+          <ScrollArea className="flex-1 px-4 pb-4 lg:px-5 lg:pb-5">
+            <ProductGrid
+              products={filteredProducts}
+              onAddToCart={addToCart}
+              formatCurrency={formatCurrency}
+            />
             {filteredProducts.length === 0 && (
               <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
                 <p className="text-sm">No products found</p>
@@ -127,10 +152,17 @@ export function PosTerminal() {
           </ScrollArea>
         </div>
 
-        <div className="flex w-[380px] flex-col gap-3 border-l border-border bg-background p-3">
+        <div
+          className={cn(
+            "flex min-h-0 flex-col gap-3 border-t border-border bg-background p-3 lg:w-[380px] lg:max-w-[400px] lg:shrink-0 lg:border-l lg:border-t-0",
+            mobileView !== "order" && "hidden lg:flex",
+            "flex-1 lg:flex-none"
+          )}
+        >
           <div className="flex-1 overflow-hidden">
             <OrderPanel
               cart={cart}
+              formatCurrency={formatCurrency}
               onUpdateQuantity={updateQuantity}
               onRemoveItem={removeItem}
               onClearCart={clearCart}
@@ -138,8 +170,11 @@ export function PosTerminal() {
             />
           </div>
           <QuickActions
-            onHoldOrder={() =>
+            onSaveOrder={() =>
               toast.info("Order held", { description: "You can resume this order later." })
+            }
+            onRecallOrder={() =>
+              toast.info("Recall", { description: "Recall feature coming soon." })
             }
             onDiscount={() =>
               toast.info("Discount", { description: "Discount feature coming soon." })
@@ -150,6 +185,39 @@ export function PosTerminal() {
             }
           />
         </div>
+      </div>
+
+      <div className="flex shrink-0 gap-2 border-t border-border bg-card p-2 lg:hidden">
+        <button
+          type="button"
+          onClick={() => setMobileView("products")}
+          className={cn(
+            "flex flex-1 items-center justify-center rounded-lg py-3 text-sm font-medium touch-manipulation",
+            mobileView === "products"
+              ? "bg-primary text-primary-foreground"
+              : "bg-secondary text-muted-foreground"
+          )}
+        >
+          Products
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileView("order")}
+          className={cn(
+            "flex flex-1 items-center justify-center gap-2 rounded-lg py-3 text-sm font-medium touch-manipulation",
+            mobileView === "order"
+              ? "bg-primary text-primary-foreground"
+              : "bg-secondary text-muted-foreground"
+          )}
+        >
+          <ShoppingCart className="h-4 w-4" />
+          Order
+          {itemCount > 0 && (
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-foreground px-1 text-xs font-bold text-primary">
+              {itemCount}
+            </span>
+          )}
+        </button>
       </div>
 
       <PaymentModal

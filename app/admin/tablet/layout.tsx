@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-  title: "MyQuickPOS - Tablette",
+  title: "MyQuickPOS - Tablet",
   manifest: "/api/manifest/tablet-admin",
   appleWebApp: {
     capable: true,

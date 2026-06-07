@@ -11,6 +11,7 @@ export interface CreateUserDto {
   assignedTerminals?: string[]
   status?: string
   permissions?: PermissionKey[] | null
+  allowedTabletIds?: string[] | null
 }
 
 export interface UpdateUserDto {
@@ -21,6 +22,7 @@ export interface UpdateUserDto {
   assignedTerminals?: string[]
   status?: string
   permissions?: PermissionKey[] | null
+  allowedTabletIds?: string[] | null
 }
 
 export const userRepository = {
@@ -65,25 +67,30 @@ export const userRepository = {
         ...(data.permissions !== undefined && {
           permissions: data.permissions,
         }),
+        ...(data.allowedTabletIds !== undefined && {
+          allowedTabletIds: data.allowedTabletIds,
+        }),
       },
     })
   },
 
   update: async (id: string, data: UpdateUserDto, tenantId: string) => {
-    const updateData: Parameters<typeof prisma.user.update>[0]["data"] = {
-      email: data.email,
-      name: data.name,
-      role: data.role,
-      status: data.status,
-    }
+    const updateData: Parameters<typeof prisma.user.update>[0]["data"] = {}
+    if (data.email !== undefined) updateData.email = data.email
+    if (data.name !== undefined) updateData.name = data.name
+    if (data.role !== undefined) updateData.role = data.role
+    if (data.status !== undefined) updateData.status = data.status
     if (data.password) {
       updateData.password = await bcrypt.hash(data.password, 10)
     }
     if (data.permissions !== undefined) {
       updateData.permissions = data.permissions
     }
-    return prisma.user.update({
-      where: { id },
+    if (data.allowedTabletIds !== undefined) {
+      updateData.allowedTabletIds = data.allowedTabletIds
+    }
+    return prisma.user.updateMany({
+      where: { id, tenantId },
       data: updateData,
     })
   },

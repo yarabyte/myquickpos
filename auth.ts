@@ -8,6 +8,7 @@ import {
   resolveUserPermissions,
   type RolePermissionsMap,
 } from "@/lib/permissions"
+import { parseAllowedTabletIds } from "@/lib/tablet-access"
 import type { Role } from "@prisma/client"
 
 const signInSchema = z.object({
@@ -52,6 +53,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
           const tenantSettings = (tenant.settings ?? {}) as { rolePermissions?: RolePermissionsMap }
           const customPermissions = parsePermissionsJson(user.permissions)
+          const allowedTabletIds = parseAllowedTabletIds(user.allowedTabletIds)
           const permissions = resolveUserPermissions({
             role: user.role as Role,
             customPermissions,
@@ -67,6 +69,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             tenantSlug: tenant.slug,
             rememberMe: rememberMe === "true",
             permissions,
+            allowedTabletIds,
           }
         } catch (err) {
           console.error("[Auth] authorize error:", err)
@@ -83,6 +86,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.tenantSlug = (user as { tenantSlug?: string }).tenantSlug
         token.role = (user as { role?: string }).role
         token.permissions = (user as { permissions?: string[] }).permissions ?? []
+        token.allowedTabletIds = (user as { allowedTabletIds?: string[] | null }).allowedTabletIds ?? null
         const rememberMe = (user as { rememberMe?: boolean }).rememberMe
         const maxAge = rememberMe ? 30 * 24 * 60 * 60 : 24 * 60 * 60
         token.exp = Math.floor(Date.now() / 1000) + maxAge
@@ -97,6 +101,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         (session.user as { role?: string }).role = token.role as string
         ;(session.user as { permissions?: string[] }).permissions =
           (token.permissions as string[]) ?? []
+        ;(session.user as { allowedTabletIds?: string[] | null }).allowedTabletIds =
+          (token.allowedTabletIds as string[] | null) ?? null
       }
       return session
     },

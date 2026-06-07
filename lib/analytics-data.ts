@@ -184,9 +184,9 @@ export function generateUserPerformance(): UserPerformance[] {
   const rand = seededRandom(4242)
 
   const cashiers = [
-    { id: "user-02", name: "Alex Johnson", email: "alex@myquickpos.com", status: "active" as const },
-    { id: "user-03", name: "Maria Garcia", email: "maria@myquickpos.com", status: "active" as const },
-    { id: "user-04", name: "James Lee", email: "james@myquickpos.com", status: "active" as const },
+    { id: "user-02", name: "Alex Johnson", email: "alex@myquickpos.app", status: "active" as const },
+    { id: "user-03", name: "Maria Garcia", email: "maria@myquickpos.app", status: "active" as const },
+    { id: "user-04", name: "James Lee", email: "james@myquickpos.app", status: "active" as const },
   ]
 
   const topProducts = ["Classic Burger", "Pepperoni", "Fries", "Cola", "Margherita", "Cheese Burger"]

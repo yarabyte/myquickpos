@@ -23,23 +23,23 @@ export const PERMISSION_KEYS = [
 export type PermissionKey = (typeof PERMISSION_KEYS)[number]
 
 export const PERMISSION_LABELS: Record<PermissionKey, string> = {
-  "admin.dashboard": "Tableau de bord",
-  "admin.orders": "Commandes",
-  "admin.terminals": "Terminaux",
-  "admin.tablet": "Tablette",
-  "tablet.manage": "Gérer établissements et tables",
-  "admin.stores": "Magasins",
-  "admin.users": "Utilisateurs",
-  "admin.customers": "Clients",
-  "admin.loyalty": "Fidélité",
-  "admin.products": "Produits",
+  "admin.dashboard": "Dashboard",
+  "admin.orders": "Orders",
+  "admin.terminals": "Terminals",
+  "admin.tablet": "Tablet",
+  "tablet.manage": "Manage tablets",
+  "admin.stores": "Stores",
+  "admin.users": "Users",
+  "admin.customers": "Customers",
+  "admin.loyalty": "Loyalty",
+  "admin.products": "Products",
   "admin.stock": "Stock",
-  "admin.analytics": "Analytique",
-  "admin.settings": "Paramètres",
-  "pos.access": "Accès POS",
-  "restaurant.tablet": "Interface tablette restaurant",
-  "users.manage": "Gérer les utilisateurs",
-  "settings.manage": "Modifier les paramètres",
+  "admin.analytics": "Analytics",
+  "admin.settings": "Settings",
+  "pos.access": "POS access",
+  "restaurant.tablet": "Restaurant tablet interface",
+  "users.manage": "Manage users",
+  "settings.manage": "Edit settings",
 }
 
 export const PERMISSION_GROUPS: { label: string; keys: PermissionKey[] }[] = [
@@ -62,11 +62,11 @@ export const PERMISSION_GROUPS: { label: string; keys: PermissionKey[] }[] = [
     ],
   },
   {
-    label: "Point de vente",
+    label: "Point of sale",
     keys: ["pos.access", "restaurant.tablet"],
   },
   {
-    label: "Actions sensibles",
+    label: "Sensitive actions",
     keys: ["users.manage", "settings.manage"],
   },
 ]
@@ -168,10 +168,10 @@ export function firstAllowedAdminRoute(permissions: PermissionKey[]): string | n
 
 export const ROLE_LABELS: Record<Role, string> = {
   SUPER_ADMIN: "Super admin",
-  ADMIN: "Administrateur",
+  ADMIN: "Administrator",
   MANAGER: "Manager",
-  CASHIER: "Caissier POS",
-  SERVER: "Serveur",
+  CASHIER: "POS Cashier",
+  SERVER: "Server",
 }
 
 export function isStaffRole(role: Role): boolean {

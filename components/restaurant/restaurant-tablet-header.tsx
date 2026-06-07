@@ -70,8 +70,8 @@ export function SwitchServerButton({
       type="button"
       onClick={handleSwitchServer}
       disabled={loading}
-      title="Changer de serveur"
-      aria-label="Changer de serveur"
+      title="Switch server"
+      aria-label="Switch server"
       className={cn(
         "flex shrink-0 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-60",
         iconOnly ? "h-9 w-9" : "gap-1.5 px-3 py-2 text-sm font-medium",
@@ -79,7 +79,7 @@ export function SwitchServerButton({
       )}
     >
       <LogOut className="h-4 w-4 shrink-0" />
-      {!iconOnly && <span>Changer de serveur</span>}
+      {!iconOnly && <span>Switch server</span>}
     </button>
   )
 }
@@ -105,8 +105,8 @@ export function RestaurantTabletHeader({
         {showBack && (
           <Link
             href="/admin/tablet"
-            title="Retour"
-            aria-label="Retour"
+            title="Back"
+            aria-label="Back"
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -146,7 +146,7 @@ export function RestaurantTabletHeader({
           {isStandalone && (
             <span className="flex shrink-0 items-center gap-1 text-[10px] font-medium text-primary sm:text-xs">
               <Wifi className="h-3 w-3" />
-              Mode tablette
+              Tablet mode
             </span>
           )}
         </div>
@@ -154,7 +154,7 @@ export function RestaurantTabletHeader({
 
       {pendingCount > 0 && (
         <div className="border-t border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-center text-xs font-medium text-amber-700 dark:text-amber-400 sm:px-4">
-          {pendingCount} commande{pendingCount > 1 ? "s" : ""} en attente de synchronisation
+          {pendingCount} order{pendingCount > 1 ? "s" : ""} pending sync
         </div>
       )}
     </header>

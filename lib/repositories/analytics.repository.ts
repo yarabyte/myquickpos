@@ -5,7 +5,7 @@ import {
   getMonthKeysInRange,
   parseDateParam,
 } from "@/lib/analytics-date-range"
-import { endOfDay, startOfDay } from "date-fns"
+import { endOfDay, startOfDay, startOfMonth } from "date-fns"
 
 type DateRange = { from: Date; to: Date }
 
@@ -51,7 +51,7 @@ export const analyticsRepository = {
     }
     return Array.from(byDay.entries()).map(([day, v]) => ({
       day,
-      label: new Date(`${day}T12:00:00`).toLocaleDateString("fr-FR", {
+      label: new Date(`${day}T12:00:00`).toLocaleDateString("en-US", {
         day: "numeric",
         month: "short",
       }),
@@ -102,7 +102,7 @@ export const analyticsRepository = {
       where: completedOrderWhere(tenantId, range),
       select: { total: true, createdAt: true },
     })
-    const monthNames = ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Aoû", "Sep", "Oct", "Nov", "Déc"]
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
     const byMonth = new Map<string, { revenue: number; orders: number }>()
     for (const key of getMonthKeysInRange(range.from, range.to)) {
       byMonth.set(key, { revenue: 0, orders: 0 })
@@ -178,17 +178,11 @@ export const analyticsRepository = {
       }))
   },
 
-  /** Today's revenue and order count per terminal (for dashboard/terminal cards) */
-  todayStatsByTerminal: async (tenantId: string) => {
-    const startOfDay = new Date()
-    startOfDay.setHours(0, 0, 0, 0)
+  /** Revenue and order count per terminal for a date range */
+  statsByTerminal: async (tenantId: string, range: DateRange) => {
     const orders = await prisma.order.groupBy({
       by: ["terminalId"],
-      where: {
-        tenantId,
-        status: "COMPLETED",
-        createdAt: { gte: startOfDay },
-      },
+      where: completedOrderWhere(tenantId, range),
       _sum: { total: true },
       _count: true,
     })
@@ -197,6 +191,22 @@ export const analyticsRepository = {
       revenue: Number(o._sum.total ?? 0),
       orders: o._count,
     }))
+  },
+
+  /** Today's revenue and order count per terminal (for dashboard/terminal cards) */
+  todayStatsByTerminal: async (tenantId: string) => {
+    const start = new Date()
+    start.setHours(0, 0, 0, 0)
+    return analyticsRepository.statsByTerminal(tenantId, { from: start, to: endOfDay(new Date()) })
+  },
+
+  /** Current month revenue and order count per terminal */
+  monthStatsByTerminal: async (tenantId: string) => {
+    const now = new Date()
+    return analyticsRepository.statsByTerminal(tenantId, {
+      from: startOfMonth(now),
+      to: endOfDay(now),
+    })
   },
 
   conversionByTerminal: async (tenantId: string, range?: DateRange) => {

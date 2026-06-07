@@ -74,8 +74,8 @@ export function RecallCartModal({
       }
       onRecall(cart, id, result.data.name)
       onClose()
-      toast.success("Commande rappelée", {
-        description: "Ajoutez des articles depuis le catalogue, puis mettez à jour ou payez.",
+      toast.success("Order recalled", {
+        description: "Add items from the catalog, then update or pay.",
       })
     },
     [products, onRecall, onClose]
@@ -108,7 +108,7 @@ export function RecallCartModal({
             Recall saved order
           </DialogTitle>
           <DialogDescription>
-            Sélectionnez une commande à charger dans le panier. Vous pourrez ajouter des articles, modifier les quantités, puis mettre à jour ou payer.
+            Select an order to load into the cart. You can add items, change quantities, then update or pay.
           </DialogDescription>
         </DialogHeader>
         {loading ? (

@@ -17,11 +17,13 @@ import { RecallCartModal } from "./recall-cart-modal"
 import { TableOrderPaymentModal, type PendingTableOrder } from "./table-order-payment-modal"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { toast } from "sonner"
-import { Monitor, ArrowLeft, UtensilsCrossed, Clock } from "lucide-react"
-import Link from "next/link"
+import { UtensilsCrossed, Clock, ShoppingCart } from "lucide-react"
 import { useSession } from "next-auth/react"
 import { formatWithCurrency, formatAmountOnly } from "@/lib/format-currency"
 import { expandCategoryIds } from "@/lib/category-tree"
+import { cn } from "@/lib/utils"
+
+type MobileView = "products" | "order"
 
 export type PrinterConfig = {
   paperWidth: "58mm" | "80mm"
@@ -56,7 +58,7 @@ export function PosTerminalView({
   pendingTableOrders = [],
 }: PosTerminalViewProps) {
   const { data: session } = useSession()
-  const cashierName = (session?.user as { name?: string } | undefined)?.name ?? "Caissier"
+  const cashierName = (session?.user as { name?: string } | undefined)?.name ?? "Cashier"
   const formatCurrency = useCallback(
     (amount: number) => formatWithCurrency(amount, currency),
     [currency]
@@ -66,6 +68,7 @@ export function PosTerminalView({
     [currency]
   )
   const [activeCategory, setActiveCategory] = useState("all")
+  const [mobileView, setMobileView] = useState<MobileView>("products")
   const [searchQuery, setSearchQuery] = useState("")
   const [cart, setCart] = useState<CartItem[]>([])
   const [paymentOpen, setPaymentOpen] = useState(false)
@@ -99,8 +102,8 @@ export function PosTerminalView({
     }))
 
     if (!isFirstPollRef.current && next.length > previousCountRef.current) {
-      toast.info("Nouvelle commande tablette", {
-        description: `${next.length - previousCountRef.current} commande(s) en attente.`,
+      toast.info("New tablet order", {
+        description: `${next.length - previousCountRef.current} order(s) pending.`,
       })
     }
     isFirstPollRef.current = false
@@ -204,9 +207,9 @@ export function PosTerminalView({
     })
     setUpdatingSavedCart(false)
     if (result.success) {
-      toast.success("Commande mise à jour", {
+      toast.success("Order updated", {
         description: recalledSavedCartName
-          ? `"${recalledSavedCartName}" inclut les nouveaux articles.`
+          ? `"${recalledSavedCartName}" includes the new items.`
           : undefined,
       })
     } else {
@@ -218,6 +221,11 @@ export function PosTerminalView({
     if (cart.length === 0) return
     setPaymentOpen(true)
   }, [cart.length])
+
+  const itemCount = useMemo(
+    () => cart.reduce((sum, item) => sum + item.quantity, 0),
+    [cart]
+  )
 
   const total = useMemo(() => {
     const subtotal = cart.reduce(
@@ -289,17 +297,22 @@ export function PosTerminalView({
   )
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden">
+    <div className="flex h-dvh flex-col overflow-hidden">
       <PosHeader
         onSearch={setSearchQuery}
         terminalName={terminalName}
         cashierName={cashierName}
       />
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
         {/* Left: Product selection area */}
-        <div className="flex flex-1 flex-col overflow-hidden">
-          <div className="px-5 pt-4 pb-3">
+        <div
+          className={cn(
+            "flex min-h-0 flex-1 flex-col overflow-hidden",
+            mobileView !== "products" && "hidden lg:flex"
+          )}
+        >
+          <div className="px-4 pt-3 pb-2 lg:px-5 lg:pt-4 lg:pb-3">
             <CategoryBar
               activeCategory={activeCategory}
               onCategoryChange={setActiveCategory}
@@ -313,7 +326,7 @@ export function PosTerminalView({
             />
           </div>
 
-          <ScrollArea className="flex-1 px-5 pb-5">
+          <ScrollArea className="flex-1 px-4 pb-4 lg:px-5 lg:pb-5">
             <ProductGrid
               products={filteredProducts}
               onAddToCart={addToCart}
@@ -331,7 +344,13 @@ export function PosTerminalView({
         </div>
 
         {/* Right: Pending table orders + Order panel */}
-        <div className="flex w-[420px] flex-col gap-3 border-l border-border bg-background p-3">
+        <div
+          className={cn(
+            "flex min-h-0 flex-col gap-3 border-t border-border bg-background p-3 lg:w-[420px] lg:max-w-[440px] lg:shrink-0 lg:border-l lg:border-t-0",
+            mobileView !== "order" && "hidden lg:flex",
+            "flex-1 lg:flex-none"
+          )}
+        >
           {pendingOrders.length > 0 && (
             <div className="shrink-0 rounded-xl border border-border bg-card overflow-hidden">
               <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted/50">
@@ -359,7 +378,7 @@ export function PosTerminalView({
                           {o.orderLabel || o.table?.name || o.orderNumber}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {o.orderNumber} · {new Date(o.createdAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                          {o.orderNumber} · {new Date(o.createdAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
                         </p>
                       </div>
                       <span className="shrink-0 text-sm font-semibold text-card-foreground font-mono">
@@ -402,6 +421,39 @@ export function PosTerminalView({
             }
           />
         </div>
+      </div>
+
+      <div className="flex shrink-0 gap-2 border-t border-border bg-card p-2 lg:hidden">
+        <button
+          type="button"
+          onClick={() => setMobileView("products")}
+          className={cn(
+            "flex flex-1 items-center justify-center rounded-lg py-3 text-sm font-medium touch-manipulation",
+            mobileView === "products"
+              ? "bg-primary text-primary-foreground"
+              : "bg-secondary text-muted-foreground"
+          )}
+        >
+          Products
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileView("order")}
+          className={cn(
+            "flex flex-1 items-center justify-center gap-2 rounded-lg py-3 text-sm font-medium touch-manipulation",
+            mobileView === "order"
+              ? "bg-primary text-primary-foreground"
+              : "bg-secondary text-muted-foreground"
+          )}
+        >
+          <ShoppingCart className="h-4 w-4" />
+          Order
+          {itemCount > 0 && (
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-foreground px-1 text-xs font-bold text-primary">
+              {itemCount}
+            </span>
+          )}
+        </button>
       </div>
 
       <PaymentModal

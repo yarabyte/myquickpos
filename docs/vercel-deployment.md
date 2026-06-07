@@ -46,7 +46,7 @@ Minimum :
 DATABASE_URL=postgresql://...@...pooler.supabase.com:6543/postgres?pgbouncer=true&sslmode=require
 DIRECT_URL=postgresql://...@...pooler.supabase.com:5432/postgres?sslmode=require
 AUTH_SECRET=<openssl rand -base64 32>
-AUTH_URL=https://votre-projet.vercel.app
+AUTH_URL=https://myquickpos.app
 ```
 
 > **Ne commitez jamais** `.env` — les secrets restent uniquement dans Vercel.
@@ -60,9 +60,9 @@ Cliquer **Deploy**. Le build exécute :
 
 ## 5. Domaine personnalisé (optionnel)
 
-**Settings → Domains** → ajouter `pos.votredomaine.com`
+**Settings → Domains** → ajouter `myquickpos.app` (et éventuellement `www.myquickpos.app`)
 
-Mettre à jour `AUTH_URL` avec le domaine final.
+`AUTH_URL` doit être `https://myquickpos.app` en production.
 
 ## Architecture
 

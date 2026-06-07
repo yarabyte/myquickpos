@@ -59,9 +59,9 @@ export function SearchableSelect({
   onValueChange,
   options = [],
   groups,
-  placeholder = "Sélectionner…",
-  searchPlaceholder = "Rechercher…",
-  emptyText = "Aucun résultat",
+  placeholder = "Select…",
+  searchPlaceholder = "Search…",
+  emptyText = "No results",
   disabled = false,
   className,
 }: SearchableSelectProps) {

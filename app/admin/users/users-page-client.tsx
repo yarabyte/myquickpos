@@ -39,6 +39,8 @@ import {
 } from "@/lib/permissions"
 import type { Role } from "@prisma/client"
 
+import type { TabletOption } from "@/components/admin/tablet-access-selector"
+
 export interface UserInfo {
   id: string
   name: string
@@ -47,11 +49,13 @@ export interface UserInfo {
   status: "active" | "inactive"
   lastLogin: string
   customPermissions: PermissionKey[] | null
+  allowedTabletIds: string[] | null
 }
 
 interface UsersPageClientProps {
   initialUsers: UserInfo[]
   terminals: { id: string; name: string }[]
+  tablets: TabletOption[]
   rolePermissions: RolePermissionsMap | null
   canManageUsers: boolean
   currentUserId?: string
@@ -60,6 +64,7 @@ interface UsersPageClientProps {
 export function UsersPageClient({
   initialUsers,
   terminals,
+  tablets,
   rolePermissions,
   canManageUsers,
   currentUserId,
@@ -161,14 +166,14 @@ export function UsersPageClient({
       tenantRolePermissions: rolePermissions,
     })
     const base = countPermissionsLabel(isCustom ? user.customPermissions : effective, isCustom)
-    return isCustom ? `${base} (personnalisé)` : base
+    return isCustom ? `${base} (custom)` : base
   }
 
   const tabs: { key: "all" | "MANAGER" | "SERVER" | "CASHIER"; label: string; count: number }[] = [
-    { key: "all", label: "Tous", count: users.length },
+    { key: "all", label: "All", count: users.length },
     { key: "MANAGER", label: "Managers", count: managerCount },
-    { key: "SERVER", label: "Serveurs", count: serverCount },
-    { key: "CASHIER", label: "Caissiers", count: cashierCount },
+    { key: "SERVER", label: "Servers", count: serverCount },
+    { key: "CASHIER", label: "Cashiers", count: cashierCount },
   ]
 
   return (
@@ -177,15 +182,15 @@ export function UsersPageClient({
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/70 backdrop-blur-[1px]">
           <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground shadow-sm">
             <Loader2 className="h-4 w-4 animate-spin text-primary" />
-            Chargement…
+            Loading…
           </div>
         </div>
       )}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Utilisateurs</h1>
+          <h1 className="text-2xl font-bold text-foreground">Users</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Gérez les comptes et les droits d&apos;accès
+            Manage accounts and access permissions
           </p>
         </div>
         {canManageUsers && (
@@ -194,7 +199,7 @@ export function UsersPageClient({
           className="bg-primary text-primary-foreground hover:bg-primary/90"
         >
           <Plus className="h-4 w-4" />
-          Ajouter
+          Add
         </Button>
         )}
       </div>
@@ -242,7 +247,7 @@ export function UsersPageClient({
               <tr className="border-b border-border bg-secondary/50">
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">User</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Role</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden md:table-cell">Droits</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden md:table-cell">Permissions</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">Status</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">Last Login</th>
                 <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
@@ -349,7 +354,7 @@ export function UsersPageClient({
                         {canManageUsers && (
                         <DropdownMenuItem onClick={() => setEditUser(user)} className="text-card-foreground">
                           <Pencil className="h-4 w-4" />
-                          Modifier
+                          Edit
                         </DropdownMenuItem>
                         )}
                         {canManageUsers && (
@@ -378,7 +383,7 @@ export function UsersPageClient({
                           className="text-destructive focus:text-destructive"
                         >
                           <Trash2 className="h-4 w-4 mr-2" />
-                          Supprimer
+                          Delete
                         </DropdownMenuItem>
                         </>
                         )}
@@ -411,6 +416,7 @@ export function UsersPageClient({
         }}
         editUser={editUser}
         terminals={terminals}
+        tablets={tablets}
         rolePermissions={rolePermissions}
         onCreateUser={createUser}
         onUpdateUser={updateUser}

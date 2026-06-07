@@ -114,7 +114,7 @@ export function AdminSidebar({
             {user?.name ?? "Admin"}
           </p>
           <p className="text-xs text-muted-foreground truncate">
-            {user?.email ?? "admin@myquickpos.com"}
+            {user?.email ?? "admin@myquickpos.app"}
           </p>
         </div>
         <div className="flex items-center gap-1">

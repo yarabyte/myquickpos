@@ -98,12 +98,12 @@ export function TabletPwaProvider({ children }: { children: React.ReactNode }) {
           {networkStatus === "offline" ? (
             <>
               <WifiOff className="h-4 w-4 shrink-0" />
-              Hors ligne — les commandes seront envoyées à la reconnexion
+              Offline — orders will be sent when reconnected
             </>
           ) : (
             <>
               <SignalLow className="h-4 w-4 shrink-0" />
-              Connexion lente — l&apos;envoi peut prendre plus de temps
+              Slow connection — sending may take longer
             </>
           )}
         </div>
@@ -117,21 +117,21 @@ export function TabletPwaProvider({ children }: { children: React.ReactNode }) {
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-card-foreground">
-                Installer l&apos;application tablette
+                Install tablet app
               </p>
               <p className="text-xs text-muted-foreground">
-                Accès rapide, mode hors ligne et meilleure gestion des coupures réseau
+                Quick access, offline mode, and better handling of network outages
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
               <Button size="sm" onClick={handleInstall}>
-                Installer
+                Install
               </Button>
               <button
                 type="button"
                 onClick={dismissInstall}
                 className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary"
-                aria-label="Fermer"
+                aria-label="Close"
               >
                 <X className="h-4 w-4" />
               </button>

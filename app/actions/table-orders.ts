@@ -45,7 +45,7 @@ const submitEstablishmentOrderSchema = z.object({
   subtotal: z.number().min(0),
   tax: z.number().min(0),
   discount: z.number().min(0).optional().default(0),
-  orderLabel: z.string().min(1, "Nom de la table ou du client requis"),
+  orderLabel: z.string().min(1, "Table or customer name is required"),
 })
 
 export type ActionResult<T = unknown> = { success: true; data: T } | { success: false; error: string }
@@ -125,7 +125,7 @@ export async function getEstablishmentOrders(
 
     const resolved = await resolveEstablishment(parsed.data.establishmentSlug)
     if (!resolved) {
-      return { success: false, error: "Establishment not found" }
+      return { success: false, error: "Tablet not found" }
     }
 
     const orders = await orderRepository.findTabletOrdersByTerminal(
@@ -209,7 +209,7 @@ const updatePendingEstablishmentOrderSchema = z.object({
   subtotal: z.number().min(0),
   tax: z.number().min(0),
   discount: z.number().min(0).optional().default(0),
-  orderLabel: z.string().min(1, "Nom de la table ou du client requis"),
+  orderLabel: z.string().min(1, "Table or customer name is required"),
 })
 
 /** Update a PENDING tablet order (public, scoped to establishment terminal). */
@@ -224,16 +224,16 @@ export async function updatePendingEstablishmentOrder(
 
     const resolved = await resolveEstablishment(parsed.data.establishmentSlug)
     if (!resolved) {
-      return { success: false, error: "Establishment not found" }
+      return { success: false, error: "Tablet not found" }
     }
 
     const existing = await orderRepository.findById(parsed.data.orderId, resolved.tenantId)
     if (!existing) return { success: false, error: "Order not found" }
     if (existing.terminalId !== resolved.terminal.id) {
-      return { success: false, error: "Order does not belong to this establishment" }
+      return { success: false, error: "Order does not belong to this tablet" }
     }
     if (existing.status !== "PENDING") {
-      return { success: false, error: "Seules les commandes en attente peuvent être modifiées" }
+      return { success: false, error: "Only pending orders can be modified" }
     }
 
     const total = parsed.data.subtotal + parsed.data.tax - (parsed.data.discount ?? 0)
@@ -272,7 +272,7 @@ export async function submitTableOrder(
       parsed.data.tableSlug
     )
     if (!resolved) {
-      return { success: false, error: "Table or establishment not found" }
+      return { success: false, error: "Tablet not found" }
     }
 
     const { table, establishment, terminal, tenantId } = resolved
@@ -317,7 +317,7 @@ export async function submitEstablishmentOrder(
 
     const resolved = await establishmentRepository.findBySlugPublic(parsed.data.establishmentSlug)
     if (!resolved) {
-      return { success: false, error: "Establishment not found" }
+      return { success: false, error: "Tablet not found" }
     }
 
     const { establishment, terminal, tenantId } = resolved

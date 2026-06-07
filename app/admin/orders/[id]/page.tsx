@@ -59,7 +59,7 @@ export default async function OrderDetailPage({
           </div>
           <div>
             <p className="text-xs font-medium text-muted-foreground uppercase">Cashier</p>
-            <p className="font-medium text-card-foreground">{order.cashierName ?? "Non renseigné"}</p>
+            <p className="font-medium text-card-foreground">{order.cashierName ?? "Not specified"}</p>
           </div>
         </div>
         <div className="rounded-xl border border-border bg-card p-4 flex items-center gap-3">

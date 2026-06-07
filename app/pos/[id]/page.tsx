@@ -81,7 +81,7 @@ export default async function PosPage({
   }))
 
   const DEFAULT_HEADER = `<p style="text-align: center"><strong>MyQuickPOS</strong></p>`
-  const DEFAULT_FOOTER = `<p style="text-align: center">Merci pour votre achat</p>`
+  const DEFAULT_FOOTER = `<p style="text-align: center">Thank you for your purchase</p>`
   const printerConfig = {
     paperWidth: (tenantSettings?.printer?.paperWidth as "58mm" | "80mm") ?? "80mm",
     headerHtml: tenantSettings?.printer?.headerHtml?.trim() || DEFAULT_HEADER,

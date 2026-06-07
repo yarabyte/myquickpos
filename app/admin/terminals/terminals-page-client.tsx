@@ -55,12 +55,14 @@ export function TerminalsPageClient({
   categories,
   users,
   currency = "USD",
+  periodLabel,
 }: {
   initialTerminals: TerminalInfo[]
   stores: StoreOption[]
   categories: { roots: CategoryInfo[]; selectable: { id: string; name: string; icon: string }[] }
   users: UserInfo[]
   currency?: string
+  periodLabel: string
 }) {
   const router = useRouter()
   const formatCurrency = useCallback(
@@ -168,6 +170,7 @@ export function TerminalsPageClient({
             key={terminal.id}
             terminal={terminal}
             formatCurrency={formatCurrency}
+            periodLabel={periodLabel}
             onDelete={setDeleteTerminalId}
             onToggleStatus={handleToggleStatus}
             onEdit={setEditTerminal}

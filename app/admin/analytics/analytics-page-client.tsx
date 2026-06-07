@@ -126,7 +126,7 @@ type AnalyticsBundle = {
 
 function serverDataToBundle(serverData: ServerData): AnalyticsBundle {
   const dayChart = serverData.revenueByDay.map((row) => ({
-    label: new Date(`${row.day}T12:00:00`).toLocaleDateString("fr-FR", {
+    label: new Date(`${row.day}T12:00:00`).toLocaleDateString("en-US", {
       day: "numeric",
       month: "short",
     }),
@@ -192,11 +192,11 @@ export function AnalyticsPageClient({
   const chartTitle = useMemo(() => {
     switch (analytics.revenueChart.granularity) {
       case "hour":
-        return "Revenus par heure"
+        return "Revenue by hour"
       case "month":
-        return "Revenus par mois"
+        return "Revenue by month"
       default:
-        return "Revenus par jour"
+        return "Revenue by day"
     }
   }, [analytics.revenueChart.granularity])
 
@@ -205,37 +205,37 @@ export function AnalyticsPageClient({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Analytics</h1>
-          <p className="text-sm text-muted-foreground mt-1">Performance des ventes et indicateurs clés</p>
+          <p className="text-sm text-muted-foreground mt-1">Sales performance and key metrics</p>
         </div>
         <AnalyticsPeriodPicker value={dateRange} onChange={setDateRange} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label="Chiffre d'affaires"
+          label="Revenue"
           value={formatCurrency(totalRevenue)}
           sub={periodSub}
           change={0}
           icon={DollarSign}
         />
         <StatCard
-          label="Commandes"
+          label="Orders"
           value={totalOrders.toString()}
           sub={periodSub}
           change={0}
           icon={ShoppingCart}
         />
         <StatCard
-          label="Panier moyen"
+          label="Average order"
           value={formatCurrency(avgTicket)}
-          sub="Par transaction"
+          sub="Per transaction"
           change={0}
           icon={TrendingUp}
         />
         <StatCard
-          label="Terminaux actifs"
+          label="Active terminals"
           value={`${onlineTerminals}/${terminalCount}`}
-          sub={`${terminalCount - onlineTerminals} hors ligne`}
+          sub={`${terminalCount - onlineTerminals} offline`}
           change={0}
           icon={Monitor}
         />
@@ -249,7 +249,7 @@ export function AnalyticsPageClient({
           </h2>
           {loading ? (
             <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
-              Chargement…
+              Loading…
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={300}>
@@ -273,8 +273,8 @@ export function AnalyticsPageClient({
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="rounded-xl border border-border bg-card p-6">
-          <h2 className="text-base font-semibold text-card-foreground mb-1">Ventes par catégorie</h2>
-          <p className="text-xs text-muted-foreground mb-6">Revenus par catégorie · {periodSub}</p>
+          <h2 className="text-base font-semibold text-card-foreground mb-1">Sales by category</h2>
+          <p className="text-xs text-muted-foreground mb-6">Revenue by category · {periodSub}</p>
           <div className="flex flex-col sm:flex-row items-center gap-6">
             <div className="w-full sm:w-[55%] min-h-[260px] h-[260px]">
               <ResponsiveContainer width="100%" height={260}>
@@ -312,7 +312,7 @@ export function AnalyticsPageClient({
                             {formatCurrency(p.revenue)}
                           </p>
                           <p className="text-xs text-muted-foreground mt-1">
-                            {(percent).toFixed(1)}% du total
+                            {(percent).toFixed(1)}% of total
                           </p>
                         </div>
                       )
@@ -347,8 +347,8 @@ export function AnalyticsPageClient({
           </div>
         </div>
         <div className="rounded-xl border border-border bg-card p-6">
-          <h2 className="text-base font-semibold text-card-foreground mb-1">Modes de paiement</h2>
-          <p className="text-xs text-muted-foreground mb-6">Revenus par type · {periodSub}</p>
+          <h2 className="text-base font-semibold text-card-foreground mb-1">Payment methods</h2>
+          <p className="text-xs text-muted-foreground mb-6">Revenue by type · {periodSub}</p>
           <ResponsiveContainer width="100%" height={280}>
             <BarChart
               data={payments}
@@ -446,7 +446,7 @@ export function AnalyticsPageClient({
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="rounded-xl border border-border bg-card p-6">
-          <h2 className="text-base font-semibold text-card-foreground mb-4">Produits les plus vendus</h2>
+          <h2 className="text-base font-semibold text-card-foreground mb-4">Top products</h2>
           <div className="space-y-3">
             {analytics.topProducts.slice(0, 5).map((p, i) => (
               <div key={p.product.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
@@ -455,7 +455,7 @@ export function AnalyticsPageClient({
                   <span className="font-medium text-card-foreground">{toTitleCase(p.product.name)}</span>
                 </div>
                 <div className="flex items-center gap-4">
-                  <span className="text-sm text-muted-foreground">{p.unitsSold} vendus</span>
+                  <span className="text-sm text-muted-foreground">{p.unitsSold} sold</span>
                   <span className="font-mono font-semibold text-card-foreground">{formatCurrency(p.revenue)}</span>
                 </div>
               </div>
@@ -463,7 +463,7 @@ export function AnalyticsPageClient({
           </div>
         </div>
         <div className="rounded-xl border border-border bg-card p-6">
-          <h2 className="text-base font-semibold text-card-foreground mb-4">Performance par terminal</h2>
+          <h2 className="text-base font-semibold text-card-foreground mb-4">Performance by terminal</h2>
           <div className="space-y-3">
             {analytics.conversionByTerminal.map((t) => (
               <div key={t.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
@@ -473,7 +473,7 @@ export function AnalyticsPageClient({
                 </div>
                 <div className="text-right">
                   <p className="font-mono font-semibold text-card-foreground">{formatCurrency(t.revenue)}</p>
-                  <p className="text-xs text-muted-foreground">{t.orders} commandes</p>
+                  <p className="text-xs text-muted-foreground">{t.orders} orders</p>
                 </div>
               </div>
             ))}

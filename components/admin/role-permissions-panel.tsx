@@ -16,8 +16,8 @@ import { toast } from "sonner"
 
 const CONFIGURABLE_ROLES: { role: Role; label: string }[] = [
   { role: "MANAGER", label: "Manager" },
-  { role: "SERVER", label: "Serveur" },
-  { role: "CASHIER", label: "Caissier POS" },
+  { role: "SERVER", label: "Server" },
+  { role: "CASHIER", label: "POS Cashier" },
 ]
 
 interface RolePermissionsPanelProps {
@@ -50,7 +50,7 @@ export function RolePermissionsPanel({
     const result = await updateTenantRolePermissions(rolePermissions)
     setSaving(false)
     if (result.success) {
-      toast.success("Profils de droits enregistrés")
+      toast.success("Role permission profiles saved")
       onSaved?.()
     } else {
       toast.error(result.error)
@@ -71,17 +71,17 @@ export function RolePermissionsPanel({
           <Shield className="h-5 w-5 text-primary" />
           <div>
             <h2 className="text-base font-semibold text-card-foreground">
-              Profils de droits par rôle
+              Role permission profiles
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Définissez les droits par défaut pour chaque type d&apos;utilisateur
+              Set default permissions for each user type
             </p>
           </div>
         </div>
         {canManage && (
           <Button onClick={handleSave} disabled={saving} size="sm" className="gap-2">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            Enregistrer les profils
+            Save profiles
           </Button>
         )}
       </div>
@@ -121,7 +121,7 @@ export function RolePermissionsPanel({
           onClick={resetToBuiltin}
           className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
         >
-          Réinitialiser au profil par défaut
+          Reset to default profile
         </button>
       )}
     </div>

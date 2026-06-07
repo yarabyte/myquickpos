@@ -36,6 +36,7 @@ interface CategoryTree {
 interface TerminalCardProps {
   terminal: PosTerminalConfig
   formatCurrency?: (amount: number) => string
+  periodLabel?: string
   onDelete: (id: string) => void
   onToggleStatus: (id: string) => void
   onEdit: (terminal: PosTerminalConfig) => void
@@ -54,6 +55,7 @@ const statusConfig = {
 export function TerminalCard({
   terminal,
   formatCurrency,
+  periodLabel,
   onDelete,
   onToggleStatus,
   onEdit,
@@ -211,19 +213,26 @@ export function TerminalCard({
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="mt-4 flex gap-4 border-t border-border pt-4">
-        <div>
-          <p className="text-xs text-muted-foreground">Sales</p>
-          <p className="text-sm font-semibold text-card-foreground font-mono">
-            {format(terminal.todaySales)}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground">Orders</p>
-          <p className="text-sm font-semibold text-card-foreground font-mono">
-            {terminal.todayOrders}
-          </p>
+      {/* Stats (current month) */}
+      <div className="mt-4 space-y-3 border-t border-border pt-4">
+        {periodLabel && (
+          <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+            {periodLabel}
+          </span>
+        )}
+        <div className="flex gap-4">
+          <div>
+            <p className="text-xs text-muted-foreground">Sales</p>
+            <p className="text-sm font-semibold text-card-foreground font-mono">
+              {format(terminal.todaySales)}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Orders</p>
+            <p className="text-sm font-semibold text-card-foreground font-mono">
+              {terminal.todayOrders}
+            </p>
+          </div>
         </div>
       </div>
 

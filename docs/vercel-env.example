@@ -14,13 +14,13 @@ Copiez ces variables dans **Vercel → Project → Settings → Environment Vari
 
 | Variable | Exemple | Notes |
 |----------|---------|-------|
-| `AUTH_URL` | `https://myquickpos.vercel.app` | URL publique de l'app (Production) |
-| `NEXTAUTH_URL` | `https://myquickpos.vercel.app` | Alias legacy, même valeur que `AUTH_URL` |
+| `AUTH_URL` | `https://myquickpos.app` | URL publique de l'app (Production) |
+| `NEXTAUTH_URL` | `https://myquickpos.app` | Alias legacy, même valeur que `AUTH_URL` |
 | `AUTH_TRUST_HOST` | `true` | Proxy Vercel (déjà géré si `trustHost` dans auth.ts) |
 
 ## Par environnement Vercel
 
-- **Production** : domaine final (`https://votre-domaine.com`)
+- **Production** : `https://myquickpos.app`
 - **Preview** : optionnel — Auth.js détecte l'hôte automatiquement avec `trustHost: true`
 
 ## Supabase — important
@@ -37,6 +37,6 @@ openssl rand -base64 32
 
 ## Vérification post-déploiement
 
-1. Ouvrir `https://votre-app.vercel.app/login`
+1. Ouvrir `https://myquickpos.app/login`
 2. Se connecter (tenant `emilemicheline`, utilisateur existant)
 3. Tester `/pos` et `/admin`
