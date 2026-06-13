@@ -169,11 +169,26 @@ export function ReceiptPreviewModal({
   ])
 
   useEffect(() => {
-    if (open && autoPrint && cart.length > 0) {
-      const t = setTimeout(handlePrint, 300)
-      return () => clearTimeout(t)
+    if (!open || !autoPrint || cart.length === 0) return
+
+    // Prefer direct ESC/POS over Bluetooth. We only auto-fire when a printer is
+    // already connected (printBytes / GATT reconnect need no user gesture). If
+    // none is connected yet, we deliberately do NOT fall back to the system
+    // print dialog — that routes through RawBT. The cashier taps the Bluetooth
+    // button once to pick the printer; every sale after that auto-prints.
+    if (isWebBluetoothAvailable()) {
+      if (getConnectionState() === "connected") {
+        const t = setTimeout(handlePrintBluetooth, 300)
+        return () => clearTimeout(t)
+      }
+      return
     }
-  }, [open, autoPrint, cart.length, handlePrint])
+
+    // No Web Bluetooth (e.g. iOS, or a desktop without BLE): keep the legacy
+    // system print so auto-print still works there.
+    const t = setTimeout(handlePrint, 300)
+    return () => clearTimeout(t)
+  }, [open, autoPrint, cart.length, handlePrintBluetooth, handlePrint])
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
