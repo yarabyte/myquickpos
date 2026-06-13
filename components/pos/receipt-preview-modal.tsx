@@ -69,6 +69,9 @@ export function ReceiptPreviewModal({
   const [printed, setPrinted] = useState(false)
   const [btState, setBtState] = useState<ConnectionState>(getConnectionState())
   const [btPrinting, setBtPrinting] = useState(false)
+  // Guards auto-print to fire exactly once per modal open (the effect re-runs
+  // on every render because the print callbacks change identity).
+  const autoPrintedRef = useRef(false)
   const autoPrint = printerConfigProp?.autoPrint === true
 
   useEffect(() => subscribeConnection(setBtState), [])
@@ -99,11 +102,15 @@ export function ReceiptPreviewModal({
     if (open) {
       setPrinting(false)
       setPrinted(false)
+      autoPrintedRef.current = false
     }
   }, [open])
 
   const handlePrint = useCallback(async () => {
     if (!receiptRef.current) return
+    // Any print counts as the one auto-print for this open (prevents a manual
+    // tap from also triggering the auto-print effect).
+    autoPrintedRef.current = true
     setPrinting(true)
     try {
       await printReceiptElement(receiptRef.current)
@@ -116,6 +123,9 @@ export function ReceiptPreviewModal({
   }, [])
 
   const handlePrintBluetooth = useCallback(async () => {
+    // Any print counts as the one auto-print for this open, so connecting via a
+    // manual tap doesn't also trigger the auto-print effect (double ticket).
+    autoPrintedRef.current = true
     setBtPrinting(true)
     try {
       if (getConnectionState() !== "connected") {
@@ -170,6 +180,10 @@ export function ReceiptPreviewModal({
 
   useEffect(() => {
     if (!open || !autoPrint || cart.length === 0) return
+    // Fire once per open. The effect re-runs on every render (the print
+    // callbacks change identity), so without this guard each completed print
+    // would schedule another one — an infinite loop.
+    if (autoPrintedRef.current) return
 
     // Prefer direct ESC/POS over Bluetooth. We only auto-fire when a printer is
     // already connected (printBytes / GATT reconnect need no user gesture). If
@@ -177,17 +191,16 @@ export function ReceiptPreviewModal({
     // print dialog — that routes through RawBT. The cashier taps the Bluetooth
     // button once to pick the printer; every sale after that auto-prints.
     if (isWebBluetoothAvailable()) {
-      if (getConnectionState() === "connected") {
-        const t = setTimeout(handlePrintBluetooth, 300)
-        return () => clearTimeout(t)
-      }
+      if (getConnectionState() !== "connected") return
+      autoPrintedRef.current = true
+      void handlePrintBluetooth()
       return
     }
 
     // No Web Bluetooth (e.g. iOS, or a desktop without BLE): keep the legacy
     // system print so auto-print still works there.
-    const t = setTimeout(handlePrint, 300)
-    return () => clearTimeout(t)
+    autoPrintedRef.current = true
+    void handlePrint()
   }, [open, autoPrint, cart.length, handlePrintBluetooth, handlePrint])
 
   return (
