@@ -8,12 +8,22 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { usePrinter } from "@/hooks/use-printer"
-import { Printer, X, CheckCircle2 } from "lucide-react"
+import { Printer, X, CheckCircle2, Bluetooth, BluetoothConnected } from "lucide-react"
 import { toast } from "sonner"
 import { cn, toTitleCase } from "@/lib/utils"
 import { printReceiptElement } from "@/lib/print-receipt"
 import { formatAmountOnly } from "@/lib/format-currency"
 import type { CartItem } from "@/lib/pos-data"
+import { buildReceiptBytes } from "@/lib/escpos/build-receipt"
+import {
+  connectPrinter,
+  printBytes,
+  getConnectionState,
+  subscribeConnection,
+  getDeviceName,
+  isWebBluetoothAvailable,
+  type ConnectionState,
+} from "@/lib/escpos/bluetooth"
 
 export type ReceiptPrinterConfig = {
   paperWidth: "58mm" | "80mm"
@@ -57,7 +67,11 @@ export function ReceiptPreviewModal({
   const receiptRef = useRef<HTMLDivElement>(null)
   const [printing, setPrinting] = useState(false)
   const [printed, setPrinted] = useState(false)
+  const [btState, setBtState] = useState<ConnectionState>(getConnectionState())
+  const [btPrinting, setBtPrinting] = useState(false)
   const autoPrint = printerConfigProp?.autoPrint === true
+
+  useEffect(() => subscribeConnection(setBtState), [])
 
   const subtotal = cart.reduce(
     (sum, item) => sum + item.product.price * item.quantity,
@@ -100,6 +114,59 @@ export function ReceiptPreviewModal({
       setPrinting(false)
     }
   }, [])
+
+  const handlePrintBluetooth = useCallback(async () => {
+    setBtPrinting(true)
+    try {
+      if (getConnectionState() !== "connected") {
+        await connectPrinter()
+        toast.success(`Connecté à ${getDeviceName() ?? "l'imprimante"}`)
+      }
+      const bytes = buildReceiptBytes({
+        cart,
+        subtotal,
+        tax,
+        taxRate,
+        total,
+        itemCount,
+        orderNo,
+        dateStr,
+        timeStr,
+        terminalName,
+        cashierName,
+        paymentMethod,
+        headerHtml: config.headerHtml,
+        footerHtml: config.footerHtml,
+        paperWidth: config.paperWidth,
+        formatCurrency,
+        formatAmount: formatLineAmount,
+      })
+      await printBytes(bytes)
+      setPrinted(true)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Échec de l'impression Bluetooth")
+    } finally {
+      setBtPrinting(false)
+    }
+  }, [
+    cart,
+    subtotal,
+    tax,
+    taxRate,
+    total,
+    itemCount,
+    orderNo,
+    dateStr,
+    timeStr,
+    terminalName,
+    cashierName,
+    paymentMethod,
+    config.headerHtml,
+    config.footerHtml,
+    config.paperWidth,
+    formatCurrency,
+    formatLineAmount,
+  ])
 
   useEffect(() => {
     if (open && autoPrint && cart.length > 0) {
@@ -225,43 +292,78 @@ export function ReceiptPreviewModal({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 p-4 border-t border-border">
+        <div className="flex flex-col gap-2 p-4 border-t border-border">
           {printed ? (
             <div className="flex flex-1 items-center justify-center gap-2 text-sm font-medium text-primary py-3">
               <CheckCircle2 className="h-4 w-4" />
               Sent to printer
             </div>
           ) : (
-            <button
-              onClick={handlePrint}
-              disabled={printing}
-              className={cn(
-                "flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold transition-all touch-manipulation select-none",
-                printing
-                  ? "bg-muted text-muted-foreground cursor-wait"
-                  : "bg-primary text-primary-foreground hover:bg-primary/90 active:scale-[0.98]"
+            <>
+              {/* Direct ESC/POS over Bluetooth — no RawBT, no print dialog */}
+              {isWebBluetoothAvailable() && (
+                <button
+                  onClick={handlePrintBluetooth}
+                  disabled={btPrinting}
+                  className={cn(
+                    "flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold transition-all touch-manipulation select-none",
+                    btPrinting
+                      ? "bg-muted text-muted-foreground cursor-wait"
+                      : "bg-primary text-primary-foreground hover:bg-primary/90 active:scale-[0.98]"
+                  )}
+                >
+                  {btPrinting ? (
+                    <>
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground" />
+                      {btState === "connected" ? "Impression…" : "Connexion…"}
+                    </>
+                  ) : btState === "connected" ? (
+                    <>
+                      <BluetoothConnected className="h-4 w-4" />
+                      Imprimer ({getDeviceName() ?? "Bluetooth"})
+                    </>
+                  ) : (
+                    <>
+                      <Bluetooth className="h-4 w-4" />
+                      Imprimer en direct (Bluetooth)
+                    </>
+                  )}
+                </button>
               )}
-            >
-              {printing ? (
-                <>
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground" />
-                  Printing…
-                </>
-              ) : (
-                <>
-                  <Printer className="h-4 w-4" />
-                  Print receipt (thermal)
-                </>
-              )}
-            </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handlePrint}
+                  disabled={printing}
+                  className={cn(
+                    "flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold transition-all touch-manipulation select-none",
+                    printing
+                      ? "bg-muted text-muted-foreground cursor-wait"
+                      : "border border-border text-foreground hover:bg-secondary active:scale-[0.98]"
+                  )}
+                >
+                  {printing ? (
+                    <>
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-foreground/30 border-t-foreground" />
+                      Printing…
+                    </>
+                  ) : (
+                    <>
+                      <Printer className="h-4 w-4" />
+                      Imprimer (système)
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={onClose}
+                  className="flex items-center justify-center rounded-xl border border-border px-5 py-3 text-sm font-medium text-muted-foreground hover:bg-secondary transition-colors touch-manipulation select-none"
+                >
+                  <X className="h-4 w-4 mr-1.5" />
+                  Close
+                </button>
+              </div>
+            </>
           )}
-          <button
-            onClick={onClose}
-            className="flex items-center justify-center rounded-xl border border-border px-5 py-3 text-sm font-medium text-muted-foreground hover:bg-secondary transition-colors touch-manipulation select-none"
-          >
-            <X className="h-4 w-4 mr-1.5" />
-            Close
-          </button>
         </div>
       </DialogContent>
     </Dialog>

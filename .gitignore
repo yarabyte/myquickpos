@@ -10,3 +10,7 @@ node_modules/
 .DS_Store
 .vercel
 .env
+
+# TypeScript incremental build info
+tsconfig.tsbuildinfo
+*.tsbuildinfo
