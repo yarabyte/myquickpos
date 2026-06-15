@@ -292,6 +292,9 @@ export function PosTerminalView({
       setCart((prev) => mergeCartItems(prev, items))
       setRecalledSavedCartId(savedCartId)
       setRecalledSavedCartName(savedCartName)
+      // On tablet/mobile the order panel is hidden behind a tab; switch to it so
+      // the recalled items are actually visible.
+      setMobileView("order")
     },
     [mergeCartItems]
   )
