@@ -21,6 +21,7 @@ import { UtensilsCrossed, Clock, ShoppingCart } from "lucide-react"
 import { useSession } from "next-auth/react"
 import { formatWithCurrency, formatAmountOnly } from "@/lib/format-currency"
 import { expandCategoryIds } from "@/lib/category-tree"
+import { playBeep } from "@/lib/sound"
 import { cn } from "@/lib/utils"
 
 type MobileView = "products" | "order"
@@ -146,6 +147,7 @@ export function PosTerminalView({
   const [lastCart, setLastCart] = useState<CartItem[]>([])
 
   const addToCart = useCallback((product: Product) => {
+    playBeep()
     setCart((prev) => {
       const existing = prev.find((item) => item.product.id === product.id)
       if (existing) {
