@@ -226,8 +226,8 @@ export function PaymentModal({
   return (
     <>
       <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="sm:max-w-md bg-card border-border text-card-foreground">
-          <DialogHeader>
+        <DialogContent className="flex max-h-[92dvh] flex-col overflow-hidden sm:max-w-md bg-card border-border text-card-foreground">
+          <DialogHeader className="shrink-0">
             <DialogTitle className="text-xl font-bold text-center">
               {step === "complete" ? "Payment Successful" : step === "customer" ? "Customer Lookup" : "Payment"}
             </DialogTitle>
@@ -235,7 +235,7 @@ export function PaymentModal({
 
           {/* Customer Lookup Step */}
           {step === "customer" && (
-            <div className="space-y-4">
+            <div className="flex min-h-0 flex-1 flex-col space-y-4 overflow-y-auto px-0.5">
               {selectedCustomer && (
                 <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
                   <div className="flex items-start justify-between">
@@ -344,7 +344,8 @@ export function PaymentModal({
           )}
 
           {step === "method" && (
-            <div className="space-y-5">
+            <div className="flex min-h-0 flex-1 flex-col">
+              <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-0.5 pb-1">
               <div className="text-center">
                 <p className="text-sm text-muted-foreground">Total Amount</p>
                 <p className="text-4xl font-bold text-primary font-mono mt-1">
@@ -443,7 +444,13 @@ export function PaymentModal({
                       Insufficient amount (short {formatCurrency(total - cashValue)})
                     </p>
                   )}
+                </>
+              )}
+              </div>
 
+              {/* Pinned action — always visible, even on short landscape screens */}
+              <div className="shrink-0 border-t border-border pt-3">
+                {method === "cash" ? (
                   <button
                     onClick={handleCashPayment}
                     disabled={cashValue < total}
@@ -454,19 +461,17 @@ export function PaymentModal({
                         : "bg-muted text-muted-foreground cursor-not-allowed"
                     )}
                   >
-                    Pay
+                    Pay {formatCurrency(total)}
                   </button>
-                </>
-              )}
-
-              {(method === "mtn" || method === "orange") && (
-                <button
-                  onClick={handleMobilePayment}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 text-base font-bold text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98] touch-manipulation select-none"
-                >
-                  Pay via {methodLabel}
-                </button>
-              )}
+                ) : (
+                  <button
+                    onClick={handleMobilePayment}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 text-base font-bold text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98] touch-manipulation select-none"
+                  >
+                    Pay via {methodLabel}
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
@@ -480,7 +485,7 @@ export function PaymentModal({
           )}
 
           {step === "complete" && (
-            <div className="flex flex-col items-center justify-center py-8 space-y-4">
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto py-8 space-y-4">
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
                 <CheckCircle2 className="h-10 w-10 text-primary" />
               </div>

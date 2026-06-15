@@ -1,4 +1,4 @@
-const CACHE_NAME = "myquickpos-v8";
+const CACHE_NAME = "myquickpos-v9";
 
 const PRECACHE_URLS = [
   "/login",
