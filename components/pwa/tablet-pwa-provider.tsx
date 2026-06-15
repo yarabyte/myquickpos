@@ -2,11 +2,9 @@
 
 import { useEffect, useState } from "react"
 import { usePathname } from "next/navigation"
-import { useSession } from "next-auth/react"
 import { Download, WifiOff, SignalLow, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useNetworkStatus } from "@/hooks/use-network-status"
-import { sessionPermissionsFromUser } from "@/lib/permissions"
 import { cn } from "@/lib/utils"
 
 interface BeforeInstallPromptEvent extends Event {
@@ -30,16 +28,9 @@ function isStandalone() {
 
 export function TabletPwaProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const { data: session } = useSession()
   const networkStatus = useNetworkStatus()
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [dismissed, setDismissed] = useState(false)
-
-  const user = session?.user as { role?: string; permissions?: string[] } | undefined
-  const permissions = sessionPermissionsFromUser(user ?? {})
-  const isServerProfile =
-    user?.role === "SERVER" ||
-    (permissions.includes("restaurant.tablet") && !permissions.includes("tablet.manage"))
 
   const active = isTabletRoute(pathname ?? "")
 
@@ -62,11 +53,10 @@ export function TabletPwaProvider({ children }: { children: React.ReactNode }) {
 
   if (!active) return <>{children}</>
 
-  const showInstall =
-    !isStandalone() &&
-    !dismissed &&
-    deferredPrompt &&
-    (isServerProfile || pathname?.startsWith("/restaurant"))
+  // Show the install prompt on any tablet route (this provider only renders
+  // when `active`), regardless of role — admins setting up a tablet need it
+  // just as much as servers.
+  const showInstall = !isStandalone() && !dismissed && Boolean(deferredPrompt)
 
   async function handleInstall() {
     if (!deferredPrompt) return
