@@ -17,6 +17,8 @@ import {
   Receipt,
   Star,
   User,
+  UserPlus,
+  ChevronLeft,
   Search,
   X,
   Gift,
@@ -98,7 +100,9 @@ export function PaymentModal({
   printerConfig,
 }: PaymentModalProps) {
   const [method, setMethod] = useState<PaymentMethod>("cash")
-  const [step, setStep] = useState<PaymentStep>("customer")
+  // Start directly on the payment method — customer lookup is now optional,
+  // reachable via the "Add customer" button on the method screen.
+  const [step, setStep] = useState<PaymentStep>("method")
   const [cashAmount, setCashAmount] = useState("")
   const [showReceipt, setShowReceipt] = useState(false)
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerOption | null>(null)
@@ -126,9 +130,9 @@ export function PaymentModal({
     setStep("method")
   }
 
-  const handleSkipCustomer = () => {
-    setSelectedCustomer(null)
-    setMethod("cash")
+  // Return from the optional customer screen to the payment method, keeping any
+  // selection (use the X on the customer card to remove it).
+  const handleBackToMethod = () => {
     setStep("method")
   }
 
@@ -167,7 +171,7 @@ export function PaymentModal({
 
   const handleDone = () => {
     setMethod("cash")
-    setStep("customer")
+    setStep("method")
     setCashAmount("")
     setSelectedCustomer(null)
     setCustomerSearch("")
@@ -176,7 +180,7 @@ export function PaymentModal({
 
   const handleClose = () => {
     setMethod("cash")
-    setStep("customer")
+    setStep("method")
     setCashAmount("")
     setSelectedCustomer(null)
     setCustomerSearch("")
@@ -322,11 +326,19 @@ export function PaymentModal({
               </div>
 
               <Button
-                onClick={handleSkipCustomer}
+                onClick={handleBackToMethod}
                 className="w-full h-12 text-base font-bold"
                 size="lg"
+                variant={selectedCustomer ? "default" : "outline"}
               >
-                Continue to Payment
+                {selectedCustomer ? (
+                  "Done"
+                ) : (
+                  <>
+                    <ChevronLeft className="h-4 w-4" />
+                    Back to payment
+                  </>
+                )}
               </Button>
             </div>
           )}
@@ -339,6 +351,33 @@ export function PaymentModal({
                   {formatCurrency(total)}
                 </p>
               </div>
+
+              {/* Optional customer — keeps the default flow to a single screen */}
+              {selectedCustomer ? (
+                <button
+                  type="button"
+                  onClick={() => setStep("customer")}
+                  className="flex w-full items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 p-3 text-left transition-colors hover:bg-primary/10 touch-manipulation"
+                >
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/20">
+                    <User className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-foreground">{selectedCustomer.name}</p>
+                    <p className="text-xs text-primary">+{earnedPoints} points</p>
+                  </div>
+                  <span className="shrink-0 text-xs font-medium text-muted-foreground">Change</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setStep("customer")}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground touch-manipulation"
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Add customer (optional)
+                </button>
+              )}
 
               <Separator />
 
