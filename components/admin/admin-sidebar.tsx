@@ -5,43 +5,45 @@ import { usePathname, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useSession, signOut } from "next-auth/react"
+import { Monitor, ChevronRight, LogOut } from "lucide-react"
+import { sessionPermissionsFromUser, type PermissionKey } from "@/lib/permissions"
 import {
-  LayoutDashboard,
-  Monitor,
-  ShoppingBag,
-  Warehouse,
-  Store,
-  Settings,
-  BarChart3,
-  ChevronRight,
-  Users,
-  LogOut,
-  UserCircle,
-  Gift,
-  Receipt,
-  Tablet,
-} from "lucide-react"
-import { ROUTE_PERMISSIONS, sessionPermissionsFromUser, type PermissionKey } from "@/lib/permissions"
+  ADMIN_NAV_GROUPS,
+  isAdminNavItemActive,
+  type AdminNavItem,
+} from "@/lib/admin-nav"
 
-const navItems: {
-  href: string
-  label: string
-  icon: React.ElementType
-  permission: PermissionKey
-}[] = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard, permission: ROUTE_PERMISSIONS["/admin"] },
-  { href: "/admin/orders", label: "Orders", icon: Receipt, permission: ROUTE_PERMISSIONS["/admin/orders"] },
-  { href: "/admin/terminals", label: "Terminals", icon: Monitor, permission: ROUTE_PERMISSIONS["/admin/terminals"] },
-  { href: "/admin/tablet", label: "Tablet", icon: Tablet, permission: ROUTE_PERMISSIONS["/admin/tablet"] },
-  { href: "/admin/stores", label: "Stores", icon: Store, permission: ROUTE_PERMISSIONS["/admin/stores"] },
-  { href: "/admin/users", label: "Users", icon: Users, permission: ROUTE_PERMISSIONS["/admin/users"] },
-  { href: "/admin/customers", label: "Customers", icon: UserCircle, permission: ROUTE_PERMISSIONS["/admin/customers"] },
-  { href: "/admin/loyalty", label: "Loyalty Programs", icon: Gift, permission: ROUTE_PERMISSIONS["/admin/loyalty"] },
-  { href: "/admin/products", label: "Products", icon: ShoppingBag, permission: ROUTE_PERMISSIONS["/admin/products"] },
-  { href: "/admin/stock", label: "Stock", icon: Warehouse, permission: ROUTE_PERMISSIONS["/admin/stock"] },
-  { href: "/admin/analytics", label: "Analytics", icon: BarChart3, permission: ROUTE_PERMISSIONS["/admin/analytics"] },
-  { href: "/admin/settings", label: "Settings", icon: Settings, permission: ROUTE_PERMISSIONS["/admin/settings"] },
-]
+function NavLink({
+  item,
+  pathname,
+  onNavigate,
+}: {
+  item: AdminNavItem
+  pathname: string
+  onNavigate?: () => void
+}) {
+  const Icon = item.icon
+  const isActive = isAdminNavItemActive(pathname, item.href)
+
+  return (
+    <li>
+      <Link
+        href={item.href}
+        onClick={onNavigate}
+        className={cn(
+          "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+          isActive
+            ? "bg-primary/10 text-primary"
+            : "text-muted-foreground hover:bg-secondary hover:text-secondary-foreground"
+        )}
+      >
+        <Icon className="h-4 w-4" />
+        {item.label}
+        {isActive && <ChevronRight className="ml-auto h-4 w-4 opacity-50" />}
+      </Link>
+    </li>
+  )
+}
 
 export function AdminSidebar({
   className,
@@ -60,7 +62,11 @@ export function AdminSidebar({
     role?: string
   } | undefined
   const permissions = sessionPermissionsFromUser(user ?? {})
-  const visibleNav = navItems.filter((item) => permissions.includes(item.permission))
+
+  const visibleGroups = ADMIN_NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => permissions.includes(item.permission)),
+  })).filter((group) => group.items.length > 0)
 
   async function handleLogout() {
     await signOut({ redirect: false })
@@ -80,32 +86,30 @@ export function AdminSidebar({
       </div>
 
       <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
-        <ul className="space-y-1">
-          {visibleNav.map((item) => {
-            const Icon = item.icon
-            const isActive =
-              pathname === item.href ||
-              (item.href !== "/admin" && pathname.startsWith(item.href))
-            return (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  onClick={onNavigate}
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                    isActive
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:bg-secondary hover:text-secondary-foreground"
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
-                  {isActive && <ChevronRight className="ml-auto h-4 w-4 opacity-50" />}
-                </Link>
-              </li>
-            )
-          })}
-        </ul>
+        {visibleGroups.map((group, groupIndex) => (
+          <div key={group.id} className={groupIndex > 0 ? "mt-1" : undefined}>
+            {group.label && (
+              <p
+                className={cn(
+                  "px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground",
+                  groupIndex === 0 ? "pt-2" : "pt-4"
+                )}
+              >
+                {group.label}
+              </p>
+            )}
+            <ul className="space-y-1">
+              {group.items.map((item) => (
+                <NavLink
+                  key={item.href}
+                  item={item}
+                  pathname={pathname}
+                  onNavigate={onNavigate}
+                />
+              ))}
+            </ul>
+          </div>
+        ))}
       </nav>
 
       <div className="flex items-center justify-between border-t border-border px-5 py-4">
