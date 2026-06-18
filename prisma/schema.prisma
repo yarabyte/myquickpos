@@ -31,8 +31,25 @@ model Tenant {
   loyalty       LoyaltyProgram?
   stockMovements StockMovement[]
   savedCarts    SavedCart[]
+  whatsappNotificationLogs WhatsAppNotificationLog[]
 
   @@index([slug])
+}
+
+// ─── WhatsApp notification log (idempotence for scheduled reports) ───────────
+
+model WhatsAppNotificationLog {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  type      String
+  periodKey String
+  msgId     Int?
+  status    String
+  createdAt DateTime @default(now())
+
+  @@unique([tenantId, type, periodKey])
+  @@index([tenantId])
 }
 
 // ─── Saved carts (POS hold / recall) ────────────────────────────────────────

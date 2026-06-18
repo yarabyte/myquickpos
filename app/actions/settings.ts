@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache"
 import { getTenantId, requirePermission } from "@/lib/auth"
 import { tenantRepository } from "@/lib/repositories/tenant.repository"
+import { sendWhatsAppTest } from "@/lib/whatsapp/send-notifications"
+import { getSessionStatus, isWhatsAppConfigured } from "@/lib/whatsapp/wasender"
 
 export async function updateTenantSettings(formData: FormData) {
   try {
@@ -22,6 +24,13 @@ export async function updateTenantSettings(formData: FormData) {
   const headerHtml = formData.get("headerHtml")?.toString()
   const footerHtml = formData.get("footerHtml")?.toString()
 
+  const whatsappEnabled = formData.get("whatsappEnabled") === "true"
+  const whatsappPhoneNumber = formData.get("whatsappPhoneNumber")?.toString()
+  const whatsappNotifyAccountCreated = formData.get("whatsappNotifyAccountCreated") === "true"
+  const whatsappNotifyDailyReport = formData.get("whatsappNotifyDailyReport") === "true"
+  const whatsappNotifyWeeklyReport = formData.get("whatsappNotifyWeeklyReport") === "true"
+  const whatsappNotifyMonthlyReport = formData.get("whatsappNotifyMonthlyReport") === "true"
+
   const printer =
     paperWidth != null || headerHtml !== undefined || footerHtml !== undefined
       ? {
@@ -32,13 +41,54 @@ export async function updateTenantSettings(formData: FormData) {
         }
       : undefined
 
+  const whatsapp = {
+    enabled: whatsappEnabled,
+    ...(whatsappPhoneNumber !== undefined && { phoneNumber: whatsappPhoneNumber }),
+    notifyAccountCreated: whatsappNotifyAccountCreated,
+    notifyDailyReport: whatsappNotifyDailyReport,
+    notifyWeeklyReport: whatsappNotifyWeeklyReport,
+    notifyMonthlyReport: whatsappNotifyMonthlyReport,
+  }
+
   await tenantRepository.updateSettings(tenantId, {
     ...(storeName !== undefined && { storeName }),
     ...(currency !== undefined && { currency }),
     ...(taxRate !== undefined && !Number.isNaN(taxRate) && { taxRate }),
     ...(printer && { printer }),
+    whatsapp,
   })
 
   revalidatePath("/admin/settings")
   return { ok: true }
+}
+
+export async function getWhatsAppSessionStatus(): Promise<{
+  configured: boolean
+  status: string | null
+}> {
+  try {
+    await requirePermission("settings.manage")
+  } catch {
+    return { configured: false, status: null }
+  }
+
+  if (!isWhatsAppConfigured()) {
+    return { configured: false, status: null }
+  }
+
+  const status = await getSessionStatus()
+  return { configured: true, status }
+}
+
+export async function sendWhatsAppTestMessage(): Promise<{ ok: boolean; error?: string }> {
+  try {
+    await requirePermission("settings.manage")
+  } catch {
+    return { ok: false, error: "Accès refusé." }
+  }
+
+  const tenantId = await getTenantId()
+  if (!tenantId) return { ok: false, error: "Non authentifié." }
+
+  return sendWhatsAppTest({ tenantId })
 }

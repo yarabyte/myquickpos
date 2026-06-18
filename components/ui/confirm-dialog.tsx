@@ -73,8 +73,8 @@ export function ConfirmDialog({
               <AlertDialogTitle className="text-card-foreground">
                 {title}
               </AlertDialogTitle>
-              <AlertDialogDescription className="text-muted-foreground">
-                {description}
+              <AlertDialogDescription asChild>
+                <div className="text-sm text-muted-foreground">{description}</div>
               </AlertDialogDescription>
             </div>
           </div>

@@ -8,6 +8,7 @@ import { permissionsFromFormData } from "@/lib/permissions"
 import { allowedTabletIdsFromFormData } from "@/lib/tablet-access"
 import { sendAccountCreatedEmail } from "@/lib/email/send-account-emails"
 import { tenantRepository } from "@/lib/repositories/tenant.repository"
+import { sendAccountCreatedWhatsApp } from "@/lib/whatsapp/send-notifications"
 import type { Role } from "@prisma/client"
 
 const createUserSchema = z.object({
@@ -72,21 +73,23 @@ export async function createUser(formData: FormData): Promise<ActionResult> {
       tenantId
     )
 
-    try {
-      const tenant = await tenantRepository.findById(tenantId)
-      if (tenant) {
-        await sendAccountCreatedEmail({
-          to: user.email,
-          name: user.name,
-          email: user.email,
-          password: plainPassword,
-          role: user.role,
-          tenantName: tenant.name,
-          tenantSlug: tenant.slug,
-        })
-      }
-    } catch (e) {
-      console.error("[createUser] welcome email failed:", e)
+    const tenant = await tenantRepository.findById(tenantId)
+    if (tenant) {
+      void sendAccountCreatedEmail({
+        to: user.email,
+        name: user.name,
+        email: user.email,
+        password: plainPassword,
+        role: user.role,
+        tenantName: tenant.name,
+        tenantSlug: tenant.slug,
+      }).catch((e) => console.error("[createUser] welcome email failed:", e))
+
+      void sendAccountCreatedWhatsApp({
+        tenantId,
+        user: { name: user.name, email: user.email, role: user.role },
+        tenant: { name: tenant.name },
+      }).catch((e) => console.error("[createUser] whatsapp notification failed:", e))
     }
 
     revalidatePath("/admin/users")

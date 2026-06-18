@@ -225,10 +225,10 @@ export function CreateUserModal({
         : await onCreateUser(fd)
 
       if (result.success) {
-        toast.success(isEdit ? "User updated" : "User created — login details sent by email")
+        toast.success(isEdit ? "User updated" : "User created")
         resetForm()
-        await onSuccess()
         onClose()
+        void onSuccess()
       } else {
         setFormError(result.error)
         toast.error(result.error)

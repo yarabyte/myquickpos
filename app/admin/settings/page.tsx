@@ -13,6 +13,14 @@ const DEFAULT_SETTINGS = {
     headerHtml: `<p style="text-align: center"><strong>MyQuickPOS Demo Store</strong></p><p style="text-align: center">123 Main Street, Suite 100</p><p style="text-align: center">Tel: (555) 123-4567</p>`,
     footerHtml: `<p style="text-align: center">Thank you for your purchase!</p><p style="text-align: center">Visit us at myquickpos.app</p><p style="text-align: center"><em>Returns accepted within 30 days</em></p>`,
   },
+  whatsapp: {
+    enabled: false,
+    phoneNumber: "",
+    notifyAccountCreated: true,
+    notifyDailyReport: false,
+    notifyWeeklyReport: false,
+    notifyMonthlyReport: false,
+  },
 }
 
 export default async function SettingsPage() {

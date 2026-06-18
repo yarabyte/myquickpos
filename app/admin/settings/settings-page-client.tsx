@@ -16,12 +16,18 @@ import {
   EyeOff,
   Save,
   Mail,
+  MessageCircle,
+  Send,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { formatWithCurrency as formatCurrencyAmount } from "@/lib/format-currency"
 import { ReceiptEditor } from "@/components/admin/receipt-editor"
 import { WelcomeEmailTemplate } from "@/components/admin/welcome-email-template"
-import { updateTenantSettings } from "@/app/actions/settings"
+import {
+  getWhatsAppSessionStatus,
+  sendWhatsAppTestMessage,
+  updateTenantSettings,
+} from "@/app/actions/settings"
 
 export type InitialSettings = {
   storeName: string
@@ -33,6 +39,23 @@ export type InitialSettings = {
     headerHtml: string
     footerHtml: string
   }
+  whatsapp: {
+    enabled: boolean
+    phoneNumber: string
+    notifyAccountCreated: boolean
+    notifyDailyReport: boolean
+    notifyWeeklyReport: boolean
+    notifyMonthlyReport: boolean
+  }
+}
+
+const SESSION_STATUS_LABELS: Record<string, string> = {
+  connected: "Connectée",
+  connecting: "Connexion en cours…",
+  disconnected: "Déconnectée",
+  need_scan: "Scan QR requis",
+  logged_out: "Déconnectée (logout)",
+  expired: "Session expirée",
 }
 
 export function SettingsPageClient({ initialSettings }: { initialSettings: InitialSettings }) {
@@ -43,13 +66,25 @@ export function SettingsPageClient({ initialSettings }: { initialSettings: Initi
   const [showPreview, setShowPreview] = useState(true)
   const [saving, setSaving] = useState(false)
   const [printer, setPrinter] = useState(initialSettings.printer)
+  const [whatsapp, setWhatsapp] = useState(initialSettings.whatsapp)
+  const [sessionStatus, setSessionStatus] = useState<{
+    configured: boolean
+    status: string | null
+  } | null>(null)
+  const [testingWhatsApp, setTestingWhatsApp] = useState(false)
+  const [whatsAppTestResult, setWhatsAppTestResult] = useState<string | null>(null)
 
   useEffect(() => {
     setStoreName(initialSettings.storeName)
     setCurrency(initialSettings.currency)
     setTaxRate(String(initialSettings.taxRate))
     setPrinter(initialSettings.printer)
+    setWhatsapp(initialSettings.whatsapp)
   }, [initialSettings])
+
+  useEffect(() => {
+    void getWhatsAppSessionStatus().then(setSessionStatus)
+  }, [])
 
   const formatWithCurrency = (amount: number) =>
     formatCurrencyAmount(amount, currency.trim() || "USD")
@@ -73,9 +108,48 @@ export function SettingsPageClient({ initialSettings }: { initialSettings: Initi
     formData.set("autoPrint", String(printer.autoPrint))
     formData.set("headerHtml", printer.headerHtml)
     formData.set("footerHtml", printer.footerHtml)
+    formData.set("whatsappEnabled", String(whatsapp.enabled))
+    formData.set("whatsappPhoneNumber", whatsapp.phoneNumber)
+    formData.set("whatsappNotifyAccountCreated", String(whatsapp.notifyAccountCreated))
+    formData.set("whatsappNotifyDailyReport", String(whatsapp.notifyDailyReport))
+    formData.set("whatsappNotifyWeeklyReport", String(whatsapp.notifyWeeklyReport))
+    formData.set("whatsappNotifyMonthlyReport", String(whatsapp.notifyMonthlyReport))
     const result = await updateTenantSettings(formData)
     setSaving(false)
     if (result?.ok) router.refresh()
+  }
+
+  async function handleWhatsAppTest() {
+    setTestingWhatsApp(true)
+    setWhatsAppTestResult(null)
+
+    const formData = new FormData()
+    formData.set("storeName", storeName)
+    formData.set("currency", currency)
+    formData.set("taxRate", taxRate)
+    formData.set("paperWidth", printer.paperWidth)
+    formData.set("autoPrint", String(printer.autoPrint))
+    formData.set("headerHtml", printer.headerHtml)
+    formData.set("footerHtml", printer.footerHtml)
+    formData.set("whatsappEnabled", String(whatsapp.enabled))
+    formData.set("whatsappPhoneNumber", whatsapp.phoneNumber)
+    formData.set("whatsappNotifyAccountCreated", String(whatsapp.notifyAccountCreated))
+    formData.set("whatsappNotifyDailyReport", String(whatsapp.notifyDailyReport))
+    formData.set("whatsappNotifyWeeklyReport", String(whatsapp.notifyWeeklyReport))
+    formData.set("whatsappNotifyMonthlyReport", String(whatsapp.notifyMonthlyReport))
+
+    const saveResult = await updateTenantSettings(formData)
+    if (!saveResult?.ok) {
+      setTestingWhatsApp(false)
+      setWhatsAppTestResult("Impossible de sauvegarder les paramètres avant le test.")
+      return
+    }
+
+    const result = await sendWhatsAppTestMessage()
+    setTestingWhatsApp(false)
+    setWhatsAppTestResult(result.ok ? "Message de test envoyé." : (result.error ?? "Échec de l'envoi."))
+    void getWhatsAppSessionStatus().then(setSessionStatus)
+    router.refresh()
   }
 
   return (
@@ -318,6 +392,143 @@ export function SettingsPageClient({ initialSettings }: { initialSettings: Initi
             </div>
           )}
         </div>
+      </div>
+
+      {/* WhatsApp Notifications */}
+      <div className="rounded-xl border border-border bg-card p-6 space-y-5">
+        <div className="flex items-center gap-2 mb-1">
+          <MessageCircle className="h-5 w-5 text-primary" />
+          <div>
+            <h2 className="text-base font-semibold text-card-foreground">
+              Notifications WhatsApp
+            </h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Recevez des alertes et rapports de vente sur WhatsApp
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/40 px-4 py-3">
+          <div>
+            <p className="text-sm font-medium text-card-foreground">Activer WhatsApp</p>
+            <p className="text-xs text-muted-foreground">
+              Envoyer des notifications au numéro configuré ci-dessous
+            </p>
+          </div>
+          <Switch
+            checked={whatsapp.enabled}
+            onCheckedChange={(checked) =>
+              setWhatsapp((w) => ({ ...w, enabled: checked }))
+            }
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="whatsapp-phone" className="text-sm text-card-foreground">
+            Numéro destinataire (E.164)
+          </Label>
+          <Input
+            id="whatsapp-phone"
+            value={whatsapp.phoneNumber}
+            onChange={(e) =>
+              setWhatsapp((w) => ({ ...w, phoneNumber: e.target.value }))
+            }
+            placeholder="+237612345678"
+            className="bg-secondary border-border text-card-foreground"
+          />
+          <p className="text-xs text-muted-foreground">
+            Format international avec indicatif pays, ex: +237612345678
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          <p className="text-sm font-medium text-card-foreground">Types de notifications</p>
+          {[
+            {
+              key: "notifyAccountCreated" as const,
+              label: "Création de compte (admin)",
+              description: "Alerte quand un utilisateur est créé depuis l'administration",
+            },
+            {
+              key: "notifyDailyReport" as const,
+              label: "Rapport journalier",
+              description: "Résumé des ventes chaque matin à 08:00 (Africa/Douala)",
+            },
+            {
+              key: "notifyWeeklyReport" as const,
+              label: "Rapport hebdomadaire",
+              description: "Résumé chaque lundi à 08:00 (semaine précédente)",
+            },
+            {
+              key: "notifyMonthlyReport" as const,
+              label: "Rapport mensuel",
+              description: "Résumé le 1er de chaque mois à 08:00 (mois précédent)",
+            },
+          ].map((item) => (
+            <div
+              key={item.key}
+              className="flex items-center justify-between rounded-lg border border-border px-4 py-3"
+            >
+              <div>
+                <p className="text-sm text-card-foreground">{item.label}</p>
+                <p className="text-xs text-muted-foreground">{item.description}</p>
+              </div>
+              <Switch
+                checked={whatsapp[item.key]}
+                onCheckedChange={(checked) =>
+                  setWhatsapp((w) => ({ ...w, [item.key]: checked }))
+                }
+              />
+            </div>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 pt-1">
+          <div className="text-xs text-muted-foreground">
+            Session WasenderAPI :{" "}
+            {sessionStatus === null ? (
+              "…"
+            ) : !sessionStatus.configured ? (
+              <span className="text-amber-600">Non configurée (WASENDER_API_KEY)</span>
+            ) : (
+              <span
+                className={cn(
+                  "font-medium",
+                  sessionStatus.status === "connected"
+                    ? "text-green-600"
+                    : "text-amber-600"
+                )}
+              >
+                {SESSION_STATUS_LABELS[sessionStatus.status ?? ""] ??
+                  sessionStatus.status ??
+                  "Inconnue"}
+              </span>
+            )}
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleWhatsAppTest}
+            disabled={testingWhatsApp || !whatsapp.phoneNumber.trim()}
+            className="gap-1.5"
+          >
+            <Send className="h-3.5 w-3.5" />
+            {testingWhatsApp ? "Envoi…" : "Envoyer un test"}
+          </Button>
+        </div>
+        {whatsAppTestResult && (
+          <p
+            className={cn(
+              "text-xs",
+              whatsAppTestResult.includes("envoyé")
+                ? "text-green-600"
+                : "text-destructive"
+            )}
+          >
+            {whatsAppTestResult}
+          </p>
+        )}
       </div>
 
       {/* Email Templates */}

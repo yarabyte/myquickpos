@@ -13,6 +13,14 @@ export type TenantSettingsJson = {
     headerHtml?: string
     footerHtml?: string
   }
+  whatsapp?: {
+    enabled?: boolean
+    phoneNumber?: string
+    notifyAccountCreated?: boolean
+    notifyDailyReport?: boolean
+    notifyWeeklyReport?: boolean
+    notifyMonthlyReport?: boolean
+  }
 }
 
 const RESERVED_SLUGS = [
@@ -27,6 +35,12 @@ export const tenantRepository = {
   findAll: () =>
     prisma.tenant.findMany({
       select: { slug: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+
+  findAllWithSettings: () =>
+    prisma.tenant.findMany({
+      select: { id: true, slug: true, name: true, settings: true },
       orderBy: { name: "asc" },
     }),
 
@@ -72,6 +86,14 @@ export const tenantRepository = {
         headerHtml: settings.printer?.headerHtml?.trim() || DEFAULT_HEADER,
         footerHtml: settings.printer?.footerHtml?.trim() || DEFAULT_FOOTER,
       },
+      whatsapp: {
+        enabled: settings.whatsapp?.enabled ?? false,
+        phoneNumber: settings.whatsapp?.phoneNumber?.trim() ?? "",
+        notifyAccountCreated: settings.whatsapp?.notifyAccountCreated ?? true,
+        notifyDailyReport: settings.whatsapp?.notifyDailyReport ?? false,
+        notifyWeeklyReport: settings.whatsapp?.notifyWeeklyReport ?? false,
+        notifyMonthlyReport: settings.whatsapp?.notifyMonthlyReport ?? false,
+      },
     }
   },
 
@@ -82,6 +104,7 @@ export const tenantRepository = {
       currency?: string
       taxRate?: number
       printer?: TenantSettingsJson["printer"]
+      whatsapp?: TenantSettingsJson["whatsapp"]
     }
   ) {
     const tenant = await prisma.tenant.findUnique({
@@ -95,6 +118,7 @@ export const tenantRepository = {
       ...(data.currency !== undefined && { currency: data.currency }),
       ...(data.taxRate !== undefined && { taxRate: data.taxRate }),
       ...(data.printer !== undefined && { printer: { ...current.printer, ...data.printer } }),
+      ...(data.whatsapp !== undefined && { whatsapp: { ...current.whatsapp, ...data.whatsapp } }),
     }
     await prisma.tenant.update({
       where: { id: tenantId },
