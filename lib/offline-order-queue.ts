@@ -32,7 +32,11 @@ function readQueue(): QueuedEstablishmentOrder[] {
 }
 
 function writeQueue(queue: QueuedEstablishmentOrder[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(queue))
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(queue))
+  } catch {
+    // private browsing or quota exceeded — queue stays in memory for this session only
+  }
 }
 
 export function getOfflineOrderQueue(): QueuedEstablishmentOrder[] {

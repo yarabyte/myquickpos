@@ -36,7 +36,11 @@ export function TabletPwaProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!active) return
-    setDismissed(sessionStorage.getItem(DISMISS_KEY) === "1")
+    try {
+      setDismissed(sessionStorage.getItem(DISMISS_KEY) === "1")
+    } catch {
+      setDismissed(false)
+    }
   }, [active, pathname])
 
   useEffect(() => {
@@ -68,7 +72,11 @@ export function TabletPwaProvider({ children }: { children: React.ReactNode }) {
   }
 
   function dismissInstall() {
-    sessionStorage.setItem(DISMISS_KEY, "1")
+    try {
+      sessionStorage.setItem(DISMISS_KEY, "1")
+    } catch {
+      // private browsing — ignore
+    }
     setDismissed(true)
   }
 
