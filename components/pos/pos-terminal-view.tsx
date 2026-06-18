@@ -395,7 +395,7 @@ export function PosTerminalView({
               </ScrollArea>
             </div>
           )}
-          <div className="flex-1 overflow-hidden">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             <OrderPanel
               cart={cart}
               taxRate={taxRate}
@@ -410,7 +410,8 @@ export function PosTerminalView({
               onCheckout={handleCheckout}
             />
           </div>
-          <QuickActions
+          <div className="shrink-0">
+            <QuickActions
             onSaveOrder={() => setSaveCartOpen(true)}
             onRecallOrder={() => setRecallCartOpen(true)}
             onDiscount={() =>
@@ -425,6 +426,7 @@ export function PosTerminalView({
               })
             }
           />
+          </div>
         </div>
       </div>
 
