@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -59,7 +58,6 @@ const SESSION_STATUS_LABELS: Record<string, string> = {
 }
 
 export function SettingsPageClient({ initialSettings }: { initialSettings: InitialSettings }) {
-  const router = useRouter()
   const [storeName, setStoreName] = useState(initialSettings.storeName)
   const [currency, setCurrency] = useState(initialSettings.currency)
   const [taxRate, setTaxRate] = useState(String(initialSettings.taxRate))
@@ -73,6 +71,7 @@ export function SettingsPageClient({ initialSettings }: { initialSettings: Initi
   } | null>(null)
   const [testingWhatsApp, setTestingWhatsApp] = useState(false)
   const [whatsAppTestResult, setWhatsAppTestResult] = useState<string | null>(null)
+  const [saveMessage, setSaveMessage] = useState<string | null>(null)
 
   useEffect(() => {
     setStoreName(initialSettings.storeName)
@@ -100,56 +99,52 @@ export function SettingsPageClient({ initialSettings }: { initialSettings: Initi
 
   async function handleSave() {
     setSaving(true)
-    const formData = new FormData()
-    formData.set("storeName", storeName)
-    formData.set("currency", currency)
-    formData.set("taxRate", taxRate)
-    formData.set("paperWidth", printer.paperWidth)
-    formData.set("autoPrint", String(printer.autoPrint))
-    formData.set("headerHtml", printer.headerHtml)
-    formData.set("footerHtml", printer.footerHtml)
-    formData.set("whatsappEnabled", String(whatsapp.enabled))
-    formData.set("whatsappPhoneNumber", whatsapp.phoneNumber)
-    formData.set("whatsappNotifyAccountCreated", String(whatsapp.notifyAccountCreated))
-    formData.set("whatsappNotifyDailyReport", String(whatsapp.notifyDailyReport))
-    formData.set("whatsappNotifyWeeklyReport", String(whatsapp.notifyWeeklyReport))
-    formData.set("whatsappNotifyMonthlyReport", String(whatsapp.notifyMonthlyReport))
-    const result = await updateTenantSettings(formData)
-    setSaving(false)
-    if (result?.ok) router.refresh()
+    setSaveMessage(null)
+    try {
+      const formData = new FormData()
+      formData.set("storeName", storeName)
+      formData.set("currency", currency)
+      formData.set("taxRate", taxRate)
+      formData.set("paperWidth", printer.paperWidth)
+      formData.set("autoPrint", String(printer.autoPrint))
+      formData.set("headerHtml", printer.headerHtml)
+      formData.set("footerHtml", printer.footerHtml)
+      formData.set("whatsappEnabled", String(whatsapp.enabled))
+      formData.set("whatsappPhoneNumber", whatsapp.phoneNumber)
+      formData.set("whatsappNotifyAccountCreated", String(whatsapp.notifyAccountCreated))
+      formData.set("whatsappNotifyDailyReport", String(whatsapp.notifyDailyReport))
+      formData.set("whatsappNotifyWeeklyReport", String(whatsapp.notifyWeeklyReport))
+      formData.set("whatsappNotifyMonthlyReport", String(whatsapp.notifyMonthlyReport))
+
+      const result = await updateTenantSettings(formData)
+      if (result?.ok) {
+        setSaveMessage("Paramètres enregistrés.")
+      } else {
+        setSaveMessage(result?.error ?? "Échec de l'enregistrement.")
+      }
+    } catch {
+      setSaveMessage("Échec de l'enregistrement. Réessayez.")
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function handleWhatsAppTest() {
     setTestingWhatsApp(true)
     setWhatsAppTestResult(null)
-
-    const formData = new FormData()
-    formData.set("storeName", storeName)
-    formData.set("currency", currency)
-    formData.set("taxRate", taxRate)
-    formData.set("paperWidth", printer.paperWidth)
-    formData.set("autoPrint", String(printer.autoPrint))
-    formData.set("headerHtml", printer.headerHtml)
-    formData.set("footerHtml", printer.footerHtml)
-    formData.set("whatsappEnabled", String(whatsapp.enabled))
-    formData.set("whatsappPhoneNumber", whatsapp.phoneNumber)
-    formData.set("whatsappNotifyAccountCreated", String(whatsapp.notifyAccountCreated))
-    formData.set("whatsappNotifyDailyReport", String(whatsapp.notifyDailyReport))
-    formData.set("whatsappNotifyWeeklyReport", String(whatsapp.notifyWeeklyReport))
-    formData.set("whatsappNotifyMonthlyReport", String(whatsapp.notifyMonthlyReport))
-
-    const saveResult = await updateTenantSettings(formData)
-    if (!saveResult?.ok) {
+    try {
+      const result = await sendWhatsAppTestMessage(whatsapp.phoneNumber)
+      setWhatsAppTestResult(
+        result.ok ? "Message de test envoyé." : (result.error ?? "Échec de l'envoi.")
+      )
+      if (result.ok) {
+        void getWhatsAppSessionStatus().then(setSessionStatus)
+      }
+    } catch {
+      setWhatsAppTestResult("Échec de l'envoi. Réessayez.")
+    } finally {
       setTestingWhatsApp(false)
-      setWhatsAppTestResult("Impossible de sauvegarder les paramètres avant le test.")
-      return
     }
-
-    const result = await sendWhatsAppTestMessage()
-    setTestingWhatsApp(false)
-    setWhatsAppTestResult(result.ok ? "Message de test envoyé." : (result.error ?? "Échec de l'envoi."))
-    void getWhatsAppSessionStatus().then(setSessionStatus)
-    router.refresh()
   }
 
   return (
@@ -437,7 +432,8 @@ export function SettingsPageClient({ initialSettings }: { initialSettings: Initi
             className="bg-secondary border-border text-card-foreground"
           />
           <p className="text-xs text-muted-foreground">
-            Format international avec indicatif pays, ex: +237612345678
+            Format international avec indicatif pays, ex: +237612345678. Cliquez sur
+            Enregistrer pour sauvegarder le numéro.
           </p>
         </div>
 
@@ -549,13 +545,24 @@ export function SettingsPageClient({ initialSettings }: { initialSettings: Initi
       </div>
 
       <Button
+        type="button"
         onClick={handleSave}
-        disabled={saving}
+        disabled={saving || testingWhatsApp}
         className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2"
       >
         <Save className="h-4 w-4" />
-        {saving ? "Saving…" : "Save Changes"}
+        {saving ? "Enregistrement…" : "Enregistrer"}
       </Button>
+      {saveMessage && (
+        <p
+          className={cn(
+            "text-sm",
+            saveMessage.includes("enregistrés") ? "text-green-600" : "text-destructive"
+          )}
+        >
+          {saveMessage}
+        </p>
+      )}
     </div>
   )
 }

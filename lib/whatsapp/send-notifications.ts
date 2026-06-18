@@ -92,14 +92,17 @@ export async function sendSalesReportWhatsApp(params: {
 
 export async function sendWhatsAppTest(params: {
   tenantId: string
+  phoneNumber?: string
 }): Promise<{ ok: boolean; error?: string }> {
   const config = await getWhatsAppConfig(params.tenantId)
   if (!config) return { ok: false, error: "Paramètres introuvables." }
-  if (!config.settings.phoneNumber?.trim()) {
+
+  const rawPhone = params.phoneNumber?.trim() || config.settings.phoneNumber?.trim()
+  if (!rawPhone) {
     return { ok: false, error: "Numéro WhatsApp non configuré." }
   }
 
-  const phone = normalizePhoneE164(config.settings.phoneNumber)
+  const phone = normalizePhoneE164(rawPhone)
   if (!/^\+\d{8,15}$/.test(phone)) {
     return { ok: false, error: "Numéro invalide. Utilisez le format E.164 (ex: +237612345678)." }
   }

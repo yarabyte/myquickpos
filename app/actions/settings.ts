@@ -50,16 +50,24 @@ export async function updateTenantSettings(formData: FormData) {
     notifyMonthlyReport: whatsappNotifyMonthlyReport,
   }
 
-  await tenantRepository.updateSettings(tenantId, {
-    ...(storeName !== undefined && { storeName }),
-    ...(currency !== undefined && { currency }),
-    ...(taxRate !== undefined && !Number.isNaN(taxRate) && { taxRate }),
-    ...(printer && { printer }),
-    whatsapp,
-  })
+  try {
+    await tenantRepository.updateSettings(tenantId, {
+      ...(storeName !== undefined && { storeName }),
+      ...(currency !== undefined && { currency }),
+      ...(taxRate !== undefined && !Number.isNaN(taxRate) && { taxRate }),
+      ...(printer && { printer }),
+      whatsapp,
+    })
 
-  revalidatePath("/admin/settings")
-  return { ok: true }
+    revalidatePath("/admin/settings")
+    return { ok: true as const }
+  } catch (error) {
+    console.error("[updateTenantSettings]", error)
+    return {
+      ok: false as const,
+      error: "Impossible d'enregistrer les paramètres. Réessayez.",
+    }
+  }
 }
 
 export async function getWhatsAppSessionStatus(): Promise<{
@@ -80,7 +88,9 @@ export async function getWhatsAppSessionStatus(): Promise<{
   return { configured: true, status }
 }
 
-export async function sendWhatsAppTestMessage(): Promise<{ ok: boolean; error?: string }> {
+export async function sendWhatsAppTestMessage(
+  phoneNumber?: string
+): Promise<{ ok: boolean; error?: string }> {
   try {
     await requirePermission("settings.manage")
   } catch {
@@ -90,5 +100,5 @@ export async function sendWhatsAppTestMessage(): Promise<{ ok: boolean; error?: 
   const tenantId = await getTenantId()
   if (!tenantId) return { ok: false, error: "Non authentifié." }
 
-  return sendWhatsAppTest({ tenantId })
+  return sendWhatsAppTest({ tenantId, phoneNumber })
 }
