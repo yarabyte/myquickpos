@@ -12,6 +12,7 @@ import {
 import { clearRememberedLogin } from "@/lib/remember-login"
 import type { Role } from "@prisma/client"
 import { cn, toTitleCase } from "@/lib/utils"
+import { subscribeMediaQuery } from "@/lib/media-query-listeners"
 import { useEffect, useState } from "react"
 
 interface RestaurantTabletHeaderProps {
@@ -30,9 +31,7 @@ function useStandalonePwa() {
 
     setStandalone(check())
     const mq = window.matchMedia("(display-mode: standalone)")
-    const onChange = () => setStandalone(check())
-    mq.addEventListener("change", onChange)
-    return () => mq.removeEventListener("change", onChange)
+    return subscribeMediaQuery(mq, () => setStandalone(check()))
   }, [])
 
   return standalone

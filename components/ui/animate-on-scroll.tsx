@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
+import { subscribeMediaQuery } from "@/lib/media-query-listeners"
 
 interface AnimateOnScrollProps {
   children: React.ReactNode
@@ -24,26 +25,33 @@ export function AnimateOnScroll({
 }: AnimateOnScrollProps) {
   const ref = useRef<HTMLDivElement>(null)
   const [isVisible, setIsVisible] = useState(false)
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(true)
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)")
-    setPrefersReducedMotion(mq.matches)
-    if (mq.matches) setIsVisible(true)
-    const handler = () => {
+    const updateMotion = () => {
       setPrefersReducedMotion(mq.matches)
       if (mq.matches) setIsVisible(true)
     }
-    mq.addEventListener("change", handler)
-    return () => mq.removeEventListener("change", handler)
+    updateMotion()
+    return subscribeMediaQuery(mq, updateMotion)
   }, [])
 
   useEffect(() => {
+    if (prefersReducedMotion) return
+
     const el = ref.current
     if (!el) return
 
+    if (typeof IntersectionObserver === "undefined") {
+      setIsVisible(true)
+      return
+    }
+
     const observer = new IntersectionObserver(
-      ([entry]) => {
+      (entries) => {
+        const entry = entries[0]
+        if (!entry) return
         if (entry.isIntersecting) {
           setIsVisible(true)
         } else if (!once) {
@@ -54,7 +62,7 @@ export function AnimateOnScroll({
     )
     observer.observe(el)
     return () => observer.disconnect()
-  }, [once, rootMargin, threshold])
+  }, [once, rootMargin, threshold, prefersReducedMotion])
 
   const visible = prefersReducedMotion || isVisible
 
