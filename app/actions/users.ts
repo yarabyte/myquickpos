@@ -88,7 +88,8 @@ export async function createUser(formData: FormData): Promise<ActionResult> {
       void sendAccountCreatedWhatsApp({
         tenantId,
         user: { name: user.name, email: user.email, role: user.role },
-        tenant: { name: tenant.name },
+        tenant: { name: tenant.name, slug: tenant.slug },
+        password: plainPassword,
       }).catch((e) => console.error("[createUser] whatsapp notification failed:", e))
     }
 

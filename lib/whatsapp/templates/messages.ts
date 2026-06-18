@@ -1,4 +1,5 @@
 import { formatWithCurrency } from "@/lib/format-currency"
+import { getLoginUrl } from "@/lib/app-url"
 
 const ROLE_LABELS: Record<string, string> = {
   SUPER_ADMIN: "Super Admin",
@@ -33,15 +34,21 @@ export function accountCreatedMessage(params: {
   storeName: string
   name: string
   email: string
+  password: string
   role: string
+  tenantSlug: string
 }): string {
   const roleLabel = ROLE_LABELS[params.role] ?? params.role
+  const loginUrl = getLoginUrl(params.tenantSlug)
   return [
     `🆕 Nouveau compte créé — ${params.storeName}`,
     "",
     `👤 ${params.name}`,
     `📧 ${params.email}`,
+    `🔐 Mot de passe : ${params.password}`,
     `🔑 Rôle : ${roleLabel}`,
+    "",
+    `🔗 Connexion : ${loginUrl}`,
   ].join("\n")
 }
 

@@ -28,7 +28,8 @@ function canSend(settings: WhatsAppSettings): settings is WhatsAppSettings & { p
 export async function sendAccountCreatedWhatsApp(params: {
   tenantId: string
   user: { name: string; email: string; role: Role }
-  tenant: { name: string }
+  tenant: { name: string; slug: string }
+  password: string
 }): Promise<void> {
   const config = await getWhatsAppConfig(params.tenantId)
   if (!config || !canSend(config.settings) || !config.settings.notifyAccountCreated) return
@@ -37,7 +38,9 @@ export async function sendAccountCreatedWhatsApp(params: {
     storeName: params.tenant.name,
     name: params.user.name,
     email: params.user.email,
+    password: params.password,
     role: params.user.role,
+    tenantSlug: params.tenant.slug,
   })
 
   await sendTextMessage({ to: config.settings.phoneNumber, text })
