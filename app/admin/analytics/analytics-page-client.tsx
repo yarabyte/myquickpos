@@ -42,8 +42,8 @@ function ChartTooltip({
   formatCurrency,
 }: {
   active?: boolean
-  payload?: { dataKey: string; value: number; color: string }[]
-  label?: string
+  payload?: ReadonlyArray<{ dataKey?: string | number; value?: unknown; color?: string }>
+  label?: string | number
   formatCurrency: (amount: number) => string
 }) {
   if (!active || !payload?.length) return null
@@ -53,9 +53,11 @@ function ChartTooltip({
       {payload.map((p, i) => (
         <div key={i} className="flex items-center gap-2 text-sm">
           <span className="h-2 w-2 rounded-full" style={{ backgroundColor: p.color }} />
-          <span className="text-muted-foreground capitalize">{p.dataKey}:</span>
+          <span className="text-muted-foreground capitalize">{String(p.dataKey)}:</span>
           <span className="font-semibold text-card-foreground font-mono">
-            {p.dataKey === "revenue" || p.dataKey === "avgTicket" ? formatCurrency(Number(p.value)) : p.value}
+            {p.dataKey === "revenue" || p.dataKey === "avgTicket"
+              ? formatCurrency(Number(p.value))
+              : String(p.value ?? "")}
           </span>
         </div>
       ))}
@@ -263,7 +265,24 @@ export function AnalyticsPageClient({
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis dataKey={revenueXKey} className="text-xs" />
                 <YAxis className="text-xs" tickFormatter={(v) => formatCurrency(v)} />
-                <Tooltip content={(props) => <ChartTooltip {...props} formatCurrency={formatCurrency} />} />
+                <Tooltip
+                  content={(props) => (
+                    <ChartTooltip
+                      active={props.active}
+                      payload={
+                        props.payload as
+                          | ReadonlyArray<{
+                              dataKey?: string | number
+                              value?: unknown
+                              color?: string
+                            }>
+                          | undefined
+                      }
+                      label={props.label}
+                      formatCurrency={formatCurrency}
+                    />
+                  )}
+                />
                 <Area type="monotone" dataKey="revenue" stroke="hsl(var(--chart-1))" fill="url(#fillRevenue)" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
@@ -401,16 +420,18 @@ export function AnalyticsPageClient({
                   dataKey="amount"
                   position="top"
                   formatter={(v: number) => formatCurrency(v)}
-                  content={({ x, y, width, value }) => {
-                    if (value == null) return null
+                  content={(props) => {
+                    const { x, y, width, value } = props
+                    if (value == null || x == null || y == null || width == null) return null
                     const text = formatCurrency(Number(value))
                     const padding = 6
                     const lineHeight = 14
-                    const boxWidth = Math.max(width, text.length * 7 + padding * 2)
+                    const barWidth = Number(width)
+                    const boxWidth = Math.max(barWidth, text.length * 7 + padding * 2)
                     const boxHeight = lineHeight + padding * 2
                     const gap = 4
                     return (
-                      <g transform={`translate(${x + width / 2},${y})`}>
+                      <g transform={`translate(${Number(x) + barWidth / 2},${y})`}>
                         <rect
                           x={-boxWidth / 2}
                           y={-boxHeight - gap}

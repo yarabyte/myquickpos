@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db"
-import type { OrderStatus } from "@prisma/client"
+import type { OrderStatus, Prisma } from "@prisma/client"
 
 export interface CreateOrderDto {
   orderNumber: string
@@ -38,7 +38,7 @@ export const orderRepository = {
     }),
 
   findMany: (tenantId: string, filters?: OrderFilters) => {
-    const where: Parameters<typeof prisma.order.findMany>[0]["where"] = { tenantId }
+    const where: Prisma.OrderWhereInput = { tenantId }
     if (filters?.status) where.status = filters.status
     if (filters?.terminalId) where.terminalId = filters.terminalId
     if (filters?.from || filters?.to) {
@@ -108,7 +108,7 @@ export const orderRepository = {
     terminalId: string,
     options?: { take?: number; from?: Date; to?: Date }
   ) => {
-    const where: Parameters<typeof prisma.order.findMany>[0]["where"] = {
+    const where: Prisma.OrderWhereInput = {
       tenantId,
       terminalId,
       OR: [{ orderLabel: { not: null } }, { tableId: { not: null } }],

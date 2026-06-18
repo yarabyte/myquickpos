@@ -22,6 +22,7 @@ import {
   firstAllowedAdminRoute,
   hasPermission,
   sessionPermissionsFromUser,
+  type PermissionKey,
 } from "@/lib/permissions"
 import {
   clearRememberedLogin,
@@ -127,8 +128,11 @@ export function LoginForm({ tenants }: LoginFormProps) {
       releaseUiLock()
 
       const session = await getSession()
-      const user = session?.user as { role?: string; permissions?: string[] } | undefined
-      const permissions = sessionPermissionsFromUser(user ?? {})
+      const user = session?.user as { role?: string; permissions?: PermissionKey[] } | undefined
+      const permissions = sessionPermissionsFromUser({
+        role: user?.role,
+        permissions: user?.permissions,
+      })
       let target = callbackUrl
 
       if (!searchParams.get("callbackUrl")) {
@@ -190,7 +194,6 @@ export function LoginForm({ tenants }: LoginFormProps) {
                 Choose an establishment
               </Label>
               <Select
-                modal={false}
                 open={tenantSelectOpen}
                 onOpenChange={setTenantSelectOpen}
                 value={tenantSlug}

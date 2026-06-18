@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db"
+import type { Prisma } from "@prisma/client"
 
 export interface ProductFilters {
   categoryId?: string
@@ -35,7 +36,7 @@ export interface UpdateProductDto {
 
 export const productRepository = {
   findAll: async (tenantId: string, filters?: ProductFilters) => {
-    const where: Parameters<typeof prisma.product.findMany>[0]["where"] = {
+    const where: Prisma.ProductWhereInput = {
       tenantId,
       ...(filters?.includeInactive !== true && { isActive: true }),
     }

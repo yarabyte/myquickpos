@@ -173,7 +173,10 @@ export function TerminalsPageClient({
             periodLabel={periodLabel}
             onDelete={setDeleteTerminalId}
             onToggleStatus={handleToggleStatus}
-            onEdit={setEditTerminal}
+            onEdit={(t) => {
+              const full = terminals.find((x) => x.id === t.id)
+              if (full) setEditTerminal(full)
+            }}
             categories={categories}
           />
         ))}
@@ -234,7 +237,9 @@ export function TerminalsPageClient({
         confirmLabel="Delete"
         cancelLabel="Cancel"
         variant="destructive"
-        onConfirm={() => deleteTerminalId && handleRemove(deleteTerminalId)}
+        onConfirm={() => {
+          if (deleteTerminalId) void handleRemove(deleteTerminalId)
+        }}
       />
     </div>
   )

@@ -258,7 +258,9 @@ export function StoresPageClient({ stores: initialStores }: { stores: StoreRow[]
         confirmLabel="Delete"
         cancelLabel="Cancel"
         variant="destructive"
-        onConfirm={() => deleteStoreId && handleDelete(deleteStoreId)}
+        onConfirm={() => {
+          if (deleteStoreId) void handleDelete(deleteStoreId)
+        }}
       />
     </div>
   )

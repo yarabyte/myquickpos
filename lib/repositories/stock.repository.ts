@@ -1,10 +1,10 @@
 import { prisma } from "@/lib/db"
-import type { StockMovementType } from "@prisma/client"
+import type { Prisma, StockMovementType } from "@prisma/client"
 import { storeStockRepository } from "./store-stock.repository"
 
 export const stockRepository = {
   getMovements: (tenantId: string, productId?: string, storeId?: string, limit = 50) => {
-    const where: Parameters<typeof prisma.stockMovement.findMany>[0]["where"] = { tenantId }
+    const where: Prisma.StockMovementWhereInput = { tenantId }
     if (productId) where.productId = productId
     if (storeId) {
       where.OR = [{ fromStoreId: storeId }, { toStoreId: storeId }]

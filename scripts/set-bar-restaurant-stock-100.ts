@@ -41,6 +41,7 @@ async function main() {
           name: STORE_NAME,
           isCentral: false,
         },
+        include: { tenant: true },
       })
       stores.push(barStore)
       console.log("Created store:", barStore.name, barStore.id)

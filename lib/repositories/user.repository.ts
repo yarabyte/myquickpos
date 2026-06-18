@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/db"
-import type { Role } from "@prisma/client"
+import { Prisma, type Role } from "@prisma/client"
 import type { PermissionKey } from "@/lib/permissions"
 
 export interface CreateUserDto {
@@ -65,17 +65,19 @@ export const userRepository = {
         tenantId,
         status: data.status ?? "active",
         ...(data.permissions !== undefined && {
-          permissions: data.permissions,
+          permissions:
+            data.permissions === null ? Prisma.JsonNull : data.permissions,
         }),
         ...(data.allowedTabletIds !== undefined && {
-          allowedTabletIds: data.allowedTabletIds,
+          allowedTabletIds:
+            data.allowedTabletIds === null ? Prisma.JsonNull : data.allowedTabletIds,
         }),
       },
     })
   },
 
   update: async (id: string, data: UpdateUserDto, tenantId: string) => {
-    const updateData: Parameters<typeof prisma.user.update>[0]["data"] = {}
+    const updateData: Prisma.UserUpdateManyMutationInput = {}
     if (data.email !== undefined) updateData.email = data.email
     if (data.name !== undefined) updateData.name = data.name
     if (data.role !== undefined) updateData.role = data.role
@@ -84,10 +86,12 @@ export const userRepository = {
       updateData.password = await bcrypt.hash(data.password, 10)
     }
     if (data.permissions !== undefined) {
-      updateData.permissions = data.permissions
+      updateData.permissions =
+        data.permissions === null ? Prisma.JsonNull : data.permissions
     }
     if (data.allowedTabletIds !== undefined) {
-      updateData.allowedTabletIds = data.allowedTabletIds
+      updateData.allowedTabletIds =
+        data.allowedTabletIds === null ? Prisma.JsonNull : data.allowedTabletIds
     }
     return prisma.user.updateMany({
       where: { id, tenantId },

@@ -227,8 +227,12 @@ export function PosTerminal() {
         cart={cart}
         completedOrderCart={lastCart}
         taxRate={8}
+        formatCurrency={(amount) => formatWithCurrency(amount, "USD")}
         terminalName="Quick Terminal"
         cashierName="Cashier"
+        onConfirmPayment={async () => {
+          handlePaymentComplete()
+        }}
         onPaymentComplete={handlePaymentComplete}
       />
 
@@ -237,6 +241,7 @@ export function PosTerminal() {
         onClose={() => setReceiptOpen(false)}
         cart={lastCart}
         taxRate={8}
+        formatCurrency={(amount) => formatWithCurrency(amount, "USD")}
         paymentMethod="Card"
         terminalName="Quick Terminal"
         cashierName="Cashier"

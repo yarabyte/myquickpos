@@ -155,7 +155,10 @@ export function AdminDashboardClient({
               periodLabel={periodLabel}
               onDelete={setDeleteTerminalId}
               onToggleStatus={handleToggleStatus}
-              onEdit={(t) => setEditTerminal(t)}
+              onEdit={(t) => {
+                const full = terminals.find((x) => x.id === t.id)
+                if (full) setEditTerminal(full)
+              }}
               categories={categories}
             />
           ))}
@@ -182,7 +185,13 @@ export function AdminDashboardClient({
         <CreateTerminalModal
           open={!!editTerminal}
           onClose={() => setEditTerminal(null)}
-          editTerminal={editTerminal}
+          editTerminal={{
+            id: editTerminal.id,
+            name: editTerminal.name,
+            location: editTerminal.label,
+            cashier: editTerminal.cashier,
+            assignedCategories: editTerminal.assignedCategories,
+          }}
           categories={categories}
           users={users}
           onCreateTerminal={createTerminal}
@@ -207,7 +216,9 @@ export function AdminDashboardClient({
         confirmLabel="Delete"
         cancelLabel="Cancel"
         variant="destructive"
-        onConfirm={() => deleteTerminalId && handleRemove(deleteTerminalId)}
+        onConfirm={() => {
+          if (deleteTerminalId) void handleRemove(deleteTerminalId)
+        }}
       />
     </div>
   )

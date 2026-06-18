@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db"
+import type { Prisma } from "@prisma/client"
 
 export interface TerminalSettings {
   assignedCategories?: string[]
@@ -47,7 +48,7 @@ export const terminalRepository = {
         label: data.label,
         tenantId,
         storeId: data.storeId ?? undefined,
-        settings: data.settings ?? undefined,
+        settings: (data.settings ?? undefined) as Prisma.InputJsonValue | undefined,
       },
     }),
 
@@ -59,7 +60,9 @@ export const terminalRepository = {
         ...(data.label !== undefined && { label: data.label }),
         ...(data.storeId !== undefined && { storeId: data.storeId }),
         ...(data.isActive !== undefined && { isActive: data.isActive }),
-        ...(data.settings !== undefined && { settings: data.settings }),
+        ...(data.settings !== undefined && {
+          settings: data.settings as Prisma.InputJsonValue,
+        }),
       },
     }),
 

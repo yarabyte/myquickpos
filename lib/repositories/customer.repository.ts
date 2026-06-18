@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db"
+import type { Prisma } from "@prisma/client"
 
 export interface CreateCustomerDto {
   name: string
@@ -20,7 +21,7 @@ export interface UpdateCustomerDto {
 
 export const customerRepository = {
   findAll: async (tenantId: string, search?: string) => {
-    const where: Parameters<typeof prisma.customer.findMany>[0]["where"] = { tenantId }
+    const where: Prisma.CustomerWhereInput = { tenantId }
     if (search) {
       where.OR = [
         { name: { contains: search, mode: "insensitive" } },

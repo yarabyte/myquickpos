@@ -3,8 +3,6 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { cn, toTitleCase } from "@/lib/utils"
-import { formatWithCurrency } from "@/lib/format-currency"
-import type { PosTerminalConfig } from "@/lib/pos-store"
 import {
   Monitor,
   MapPin,
@@ -33,13 +31,24 @@ interface CategoryTree {
   children?: { id: string; name: string; icon: string }[]
 }
 
+export interface TerminalCardTerminal {
+  id: string
+  name: string
+  location: string
+  status: "online" | "offline" | "maintenance"
+  cashier: string
+  assignedCategories: string[]
+  todaySales: number
+  todayOrders: number
+}
+
 interface TerminalCardProps {
-  terminal: PosTerminalConfig
+  terminal: TerminalCardTerminal
   formatCurrency?: (amount: number) => string
   periodLabel?: string
   onDelete: (id: string) => void
   onToggleStatus: (id: string) => void
-  onEdit: (terminal: PosTerminalConfig) => void
+  onEdit: (terminal: TerminalCardTerminal) => void
   categories?: { roots: CategoryTree[] }
 }
 

@@ -438,7 +438,9 @@ export function UsersPageClient({
         confirmLabel="Delete"
         cancelLabel="Cancel"
         variant="destructive"
-        onConfirm={() => deleteUserTarget && handleDelete(deleteUserTarget.id)}
+        onConfirm={() => {
+          if (deleteUserTarget) void handleDelete(deleteUserTarget.id)
+        }}
       />
     </div>
   )

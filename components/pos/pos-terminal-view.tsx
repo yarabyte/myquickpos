@@ -250,7 +250,7 @@ export function PosTerminalView({
         paymentMethod: paymentData.paymentMethod,
         subtotal,
         tax: taxAmount,
-        total: subtotal + taxAmount,
+        discount: 0,
         items: cart.map((item) => ({
           productId: item.product.id,
           quantity: item.quantity,
