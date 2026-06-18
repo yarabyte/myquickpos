@@ -1,5 +1,6 @@
 "use client"
 
+import { memo } from "react"
 import { Receipt, Percent, Save, ShoppingBag, RotateCcw } from "lucide-react"
 
 interface QuickActionsProps {
@@ -10,7 +11,7 @@ interface QuickActionsProps {
   onRefund: () => void
 }
 
-export function QuickActions({
+export const QuickActions = memo(function QuickActions({
   onSaveOrder,
   onRecallOrder,
   onDiscount,
@@ -33,7 +34,7 @@ export function QuickActions({
           <button
             key={action.label}
             onClick={action.onClick}
-            className="flex flex-col items-center gap-1.5 rounded-lg border border-border bg-card p-3 text-muted-foreground transition-all hover:border-primary/30 hover:text-card-foreground active:scale-[0.97] touch-manipulation select-none"
+            className="flex flex-col items-center gap-1.5 rounded-lg border border-border bg-card p-3 text-muted-foreground touch-manipulation select-none active:border-primary/30 active:text-card-foreground"
           >
             <Icon className="h-4 w-4" />
             <span className="text-xs font-medium">{action.label}</span>
@@ -42,4 +43,4 @@ export function QuickActions({
       })}
     </div>
   )
-}
+})

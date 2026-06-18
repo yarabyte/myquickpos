@@ -6,25 +6,33 @@ import { deleteSavedCart, updateSavedCart } from "@/app/actions/saved-carts"
 import { getPendingTableOrders } from "@/app/actions/table-orders"
 import type { CartItem, Product, Category } from "@/lib/pos-data"
 import { PosHeader } from "./pos-header"
-import { CategoryBar } from "./category-bar"
-import { ProductGrid } from "./product-grid"
-import { OrderPanel } from "./order-panel"
+import { PosProductSection } from "./pos-product-section"
+import { PosOrderSidebar } from "./pos-order-sidebar"
 import { PaymentModal } from "./payment-modal"
-import { QuickActions } from "./quick-actions"
 import { ReceiptPreviewModal } from "./receipt-preview-modal"
 import { SaveCartModal } from "./save-cart-modal"
 import { RecallCartModal } from "./recall-cart-modal"
 import { TableOrderPaymentModal, type PendingTableOrder } from "./table-order-payment-modal"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { toProductCardData } from "./product-card"
+import type { CategoryBarCategory } from "./category-bar"
 import { toast } from "sonner"
-import { UtensilsCrossed, Clock, ShoppingCart } from "lucide-react"
+import { ShoppingCart } from "lucide-react"
 import { useSession } from "next-auth/react"
 import { formatWithCurrency, formatAmountOnly } from "@/lib/format-currency"
 import { expandCategoryIds } from "@/lib/category-tree"
+import { buildCategoryDescendantMap } from "@/lib/category-descendants"
 import { playBeep } from "@/lib/sound"
 import { cn } from "@/lib/utils"
 
 type MobileView = "products" | "order"
+
+function pendingOrdersEqual(a: PendingTableOrder[], b: PendingTableOrder[]) {
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) {
+    if (a[i].id !== b[i].id || a[i].total !== b[i].total) return false
+  }
+  return true
+}
 
 export type PrinterConfig = {
   paperWidth: "58mm" | "80mm"
@@ -109,20 +117,30 @@ export function PosTerminalView({
     }
     isFirstPollRef.current = false
     previousCountRef.current = next.length
-    setPendingOrders(next)
+    setPendingOrders((prev) => (pendingOrdersEqual(prev, next) ? prev : next))
   }, [terminalId])
 
   useEffect(() => {
     refreshPendingOrders()
-    const interval = setInterval(refreshPendingOrders, 5000)
+    const interval = setInterval(refreshPendingOrders, 8000)
     return () => clearInterval(interval)
   }, [refreshPendingOrders])
 
-  const getDescendantIds = useCallback((categoryId: string): string[] => {
-    const kids = categories.filter((c) => c.parentId === categoryId)
-    if (kids.length === 0) return [categoryId]
-    return [categoryId, ...kids.flatMap((k) => getDescendantIds(k.id))]
-  }, [categories])
+  const categoryDescendants = useMemo(
+    () => buildCategoryDescendantMap(categories),
+    [categories]
+  )
+
+  const categoryBarCategories = useMemo<CategoryBarCategory[]>(
+    () =>
+      categories.map((category) => ({
+        id: category.id,
+        name: category.name,
+        icon: category.icon ?? "grid",
+        parentId: category.parentId ?? null,
+      })),
+    [categories]
+  )
 
   const terminalProducts = useMemo(() => {
     if (assignedCategories.length === 0) return allProducts
@@ -133,21 +151,35 @@ export function PosTerminalView({
   const filteredProducts = useMemo(() => {
     let result = terminalProducts
     if (activeCategory !== "all") {
-      const ids = getDescendantIds(activeCategory)
-      result = result.filter((p) => ids.includes(p.category))
+      const ids = categoryDescendants.get(activeCategory)
+      if (ids) {
+        result = result.filter((product) => ids.has(product.category))
+      }
     }
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase()
-      result = result.filter((p) => p.name.toLowerCase().includes(query))
+      result = result.filter((product) => product.name.toLowerCase().includes(query))
     }
     return result
-  }, [activeCategory, searchQuery, terminalProducts, getDescendantIds])
+  }, [activeCategory, searchQuery, terminalProducts, categoryDescendants])
+
+  const productById = useMemo(
+    () => new Map(terminalProducts.map((product) => [product.id, product])),
+    [terminalProducts]
+  )
+  const productByIdRef = useRef(productById)
+  productByIdRef.current = productById
+
+  const displayProducts = useMemo(
+    () => toProductCardData(filteredProducts, (price) => formatWithCurrency(price, currency)),
+    [filteredProducts, currency]
+  )
 
   // keep a copy of last completed order for receipt reprint
   const [lastCart, setLastCart] = useState<CartItem[]>([])
 
   const addToCart = useCallback((product: Product) => {
-    playBeep()
+    requestAnimationFrame(() => playBeep())
     setCart((prev) => {
       const existing = prev.find((item) => item.product.id === product.id)
       if (existing) {
@@ -160,6 +192,14 @@ export function PosTerminalView({
       return [...prev, { product, quantity: 1 }]
     })
   }, [])
+
+  const addToCartById = useCallback(
+    (productId: string) => {
+      const product = productByIdRef.current.get(productId)
+      if (product) addToCart(product)
+    },
+    [addToCart]
+  )
 
   const updateQuantity = useCallback((productId: string, delta: number) => {
     setCart((prev) =>
@@ -301,6 +341,25 @@ export function PosTerminalView({
     [mergeCartItems]
   )
 
+  const handlePendingOrderClick = useCallback((order: PendingTableOrder) => {
+    setTableOrderModalOrder(order)
+    setTableOrderModalOpen(true)
+  }, [])
+
+  const handleSaveOrder = useCallback(() => setSaveCartOpen(true), [])
+  const handleRecallOrder = useCallback(() => setRecallCartOpen(true), [])
+  const handleDiscount = useCallback(
+    () => toast.info("Discount", { description: "Discount feature coming soon." }),
+    []
+  )
+  const handleRefund = useCallback(
+    () => toast.info("Refund", { description: "Refund feature coming soon." }),
+    []
+  )
+
+  const assignedCategoryFilter =
+    assignedCategories.length > 0 ? assignedCategories : undefined
+
   return (
     <div className="flex h-dvh flex-col overflow-hidden">
       <PosHeader
@@ -310,124 +369,37 @@ export function PosTerminalView({
       />
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
-        {/* Left: Product selection area */}
-        <div
-          className={cn(
-            "flex min-h-0 flex-1 flex-col overflow-hidden",
-            mobileView !== "products" && "hidden lg:flex"
-          )}
-        >
-          <div className="px-4 pt-3 pb-2 lg:px-5 lg:pt-4 lg:pb-3">
-            <CategoryBar
-              activeCategory={activeCategory}
-              onCategoryChange={setActiveCategory}
-              allowedCategories={assignedCategories.length > 0 ? assignedCategories : undefined}
-              categories={categories.map((c) => ({
-                id: c.id,
-                name: c.name,
-                icon: c.icon ?? "grid",
-                parentId: c.parentId ?? null,
-              }))}
-            />
-          </div>
+        <PosProductSection
+          visible={mobileView === "products"}
+          activeCategory={activeCategory}
+          onCategoryChange={setActiveCategory}
+          categories={categoryBarCategories}
+          assignedCategories={assignedCategoryFilter}
+          products={displayProducts}
+          onAddToCart={addToCartById}
+        />
 
-          <ScrollArea className="flex-1 px-4 pb-4 lg:px-5 lg:pb-5">
-            <ProductGrid
-              products={filteredProducts}
-              onAddToCart={addToCart}
-              formatCurrency={formatCurrency}
-            />
-            {filteredProducts.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-                <p className="text-sm">No products found</p>
-                <p className="text-xs mt-1">
-                  Try a different category or search
-                </p>
-              </div>
-            )}
-          </ScrollArea>
-        </div>
-
-        {/* Right: Pending table orders + Order panel */}
-        <div
-          className={cn(
-            "flex min-h-0 flex-col gap-3 border-t border-border bg-background p-3 lg:w-[420px] lg:max-w-[440px] lg:shrink-0 lg:border-l lg:border-t-0",
-            mobileView !== "order" && "hidden lg:flex",
-            "flex-1 lg:flex-none"
-          )}
-        >
-          {pendingOrders.length > 0 && (
-            <div className="shrink-0 rounded-xl border border-border bg-card overflow-hidden">
-              <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted/50">
-                <UtensilsCrossed className="h-4 w-4 text-primary" />
-                <span className="text-sm font-semibold text-card-foreground">Order from Tablet</span>
-                <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded bg-primary px-1 text-xs font-bold text-primary-foreground">
-                  {pendingOrders.length}
-                </span>
-              </div>
-              <ScrollArea className="max-h-[180px]">
-                <div className="p-2 space-y-1">
-                  {pendingOrders.map((o) => (
-                    <button
-                      key={o.id}
-                      type="button"
-                      onClick={() => {
-                        setTableOrderModalOrder(o)
-                        setTableOrderModalOpen(true)
-                      }}
-                      className="flex w-full items-center gap-2 rounded-lg border border-transparent p-2.5 text-left transition-colors hover:border-border hover:bg-muted/50"
-                    >
-                      <Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-card-foreground">
-                          {o.orderLabel || o.table?.name || o.orderNumber}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {o.orderNumber} · {new Date(o.createdAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
-                        </p>
-                      </div>
-                      <span className="shrink-0 text-sm font-semibold text-card-foreground font-mono">
-                        {formatCurrency(o.total)}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </ScrollArea>
-            </div>
-          )}
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <OrderPanel
-              cart={cart}
-              taxRate={taxRate}
-              formatCurrency={formatCurrency}
-              formatAmount={formatAmount}
-              recalledOrderName={recalledSavedCartName}
-              onUpdateSavedOrder={recalledSavedCartId ? handleUpdateSavedOrder : undefined}
-              isUpdatingSavedOrder={updatingSavedCart}
-              onUpdateQuantity={updateQuantity}
-              onRemoveItem={removeItem}
-              onClearCart={clearCart}
-              onCheckout={handleCheckout}
-            />
-          </div>
-          <div className="shrink-0">
-            <QuickActions
-            onSaveOrder={() => setSaveCartOpen(true)}
-            onRecallOrder={() => setRecallCartOpen(true)}
-            onDiscount={() =>
-              toast.info("Discount", {
-                description: "Discount feature coming soon.",
-              })
-            }
-            onReceipt={handleReceiptQuickAction}
-            onRefund={() =>
-              toast.info("Refund", {
-                description: "Refund feature coming soon.",
-              })
-            }
-          />
-          </div>
-        </div>
+        <PosOrderSidebar
+          visible={mobileView === "order"}
+          cart={cart}
+          taxRate={taxRate}
+          formatCurrency={formatCurrency}
+          formatAmount={formatAmount}
+          recalledOrderName={recalledSavedCartName}
+          onUpdateSavedOrder={recalledSavedCartId ? handleUpdateSavedOrder : undefined}
+          isUpdatingSavedOrder={updatingSavedCart}
+          onUpdateQuantity={updateQuantity}
+          onRemoveItem={removeItem}
+          onClearCart={clearCart}
+          onCheckout={handleCheckout}
+          pendingOrders={pendingOrders}
+          onPendingOrderClick={handlePendingOrderClick}
+          onSaveOrder={handleSaveOrder}
+          onRecallOrder={handleRecallOrder}
+          onDiscount={handleDiscount}
+          onReceipt={handleReceiptQuickAction}
+          onRefund={handleRefund}
+        />
       </div>
 
       <div className="flex shrink-0 gap-2 border-t border-border bg-card p-2 lg:hidden">
@@ -463,72 +435,81 @@ export function PosTerminalView({
         </button>
       </div>
 
-      <PaymentModal
-        open={paymentOpen}
-        onClose={() => setPaymentOpen(false)}
-        total={total}
-        cart={cart}
-        completedOrderCart={lastCart}
-        taxRate={taxRate}
-        formatCurrency={formatCurrency}
-        formatAmount={formatAmount}
-        currency={currency}
-        terminalName={terminalName}
-        cashierName={cashierName}
-        customers={customers}
-        onConfirmPayment={handlePaymentComplete}
-        onPaymentComplete={() => setPaymentOpen(false)}
-        printerConfig={printerConfig}
-      />
+      {paymentOpen && (
+        <PaymentModal
+          open
+          onClose={() => setPaymentOpen(false)}
+          total={total}
+          cart={cart}
+          completedOrderCart={lastCart}
+          taxRate={taxRate}
+          formatCurrency={formatCurrency}
+          formatAmount={formatAmount}
+          currency={currency}
+          terminalName={terminalName}
+          cashierName={cashierName}
+          customers={customers}
+          onConfirmPayment={handlePaymentComplete}
+          onPaymentComplete={() => setPaymentOpen(false)}
+          printerConfig={printerConfig}
+        />
+      )}
 
-      {/* Receipt reprint from quick action */}
-      <ReceiptPreviewModal
-        open={receiptOpen}
-        onClose={() => setReceiptOpen(false)}
-        cart={lastCart}
-        taxRate={taxRate}
-        formatCurrency={formatCurrency}
-        formatAmount={formatAmount}
-        currency={currency}
-        paymentMethod={lastPaymentMethod}
-        terminalName={terminalName}
-        cashierName={cashierName}
-        printerConfig={printerConfig}
-      />
+      {receiptOpen && (
+        <ReceiptPreviewModal
+          open
+          onClose={() => setReceiptOpen(false)}
+          cart={lastCart}
+          taxRate={taxRate}
+          formatCurrency={formatCurrency}
+          formatAmount={formatAmount}
+          currency={currency}
+          paymentMethod={lastPaymentMethod}
+          terminalName={terminalName}
+          cashierName={cashierName}
+          printerConfig={printerConfig}
+        />
+      )}
 
-      <SaveCartModal
-        open={saveCartOpen}
-        onClose={() => setSaveCartOpen(false)}
-        cart={cart}
-        terminalId={terminalId}
-        savedCartId={recalledSavedCartId}
-        initialName={recalledSavedCartName ?? ""}
-        onSaved={() => setSaveCartOpen(false)}
-      />
+      {saveCartOpen && (
+        <SaveCartModal
+          open
+          onClose={() => setSaveCartOpen(false)}
+          cart={cart}
+          terminalId={terminalId}
+          savedCartId={recalledSavedCartId}
+          initialName={recalledSavedCartName ?? ""}
+          onSaved={() => setSaveCartOpen(false)}
+        />
+      )}
 
-      <RecallCartModal
-        open={recallCartOpen}
-        onClose={() => setRecallCartOpen(false)}
-        terminalId={terminalId}
-        products={allProducts}
-        onRecall={handleRecallCart}
-      />
+      {recallCartOpen && (
+        <RecallCartModal
+          open
+          onClose={() => setRecallCartOpen(false)}
+          terminalId={terminalId}
+          products={allProducts}
+          onRecall={handleRecallCart}
+        />
+      )}
 
-      <TableOrderPaymentModal
-        open={tableOrderModalOpen}
-        onClose={() => {
-          setTableOrderModalOpen(false)
-          setTableOrderModalOrder(null)
-        }}
-        order={tableOrderModalOrder}
-        formatCurrency={formatCurrency}
-        formatAmount={formatAmount}
-        currency={currency}
-        taxRate={taxRate}
-        terminalName={terminalName}
-        printerConfig={printerConfig}
-        onCompleted={refreshPendingOrders}
-      />
+      {tableOrderModalOpen && tableOrderModalOrder && (
+        <TableOrderPaymentModal
+          open
+          onClose={() => {
+            setTableOrderModalOpen(false)
+            setTableOrderModalOrder(null)
+          }}
+          order={tableOrderModalOrder}
+          formatCurrency={formatCurrency}
+          formatAmount={formatAmount}
+          currency={currency}
+          taxRate={taxRate}
+          terminalName={terminalName}
+          printerConfig={printerConfig}
+          onCompleted={refreshPendingOrders}
+        />
+      )}
     </div>
   )
 }

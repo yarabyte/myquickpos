@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Monitor, User, Search, ArrowLeft, LogOut, LayoutDashboard, ChevronDown, X } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useSession, signOut } from "next-auth/react"
@@ -28,7 +28,24 @@ export function PosHeader({ onSearch, terminalName, cashierName }: PosHeaderProp
   const [time, setTime] = useState("")
   const [date, setDate] = useState("")
   const [searchOpen, setSearchOpen] = useState(false)
+  const [searchValue, setSearchValue] = useState("")
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hasDashboardAccess = ["SUPER_ADMIN", "ADMIN", "MANAGER"].includes(user?.role ?? "")
+
+  const queueSearch = useCallback(
+    (value: string) => {
+      setSearchValue(value)
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+      searchTimerRef.current = setTimeout(() => onSearch(value), 180)
+    },
+    [onSearch]
+  )
+
+  useEffect(() => {
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+    }
+  }, [])
 
   useEffect(() => {
     const update = () => {
@@ -103,7 +120,8 @@ export function PosHeader({ onSearch, terminalName, cashierName }: PosHeaderProp
           <input
             type="text"
             placeholder="Search products..."
-            onChange={(e) => onSearch(e.target.value)}
+            value={searchValue}
+            onChange={(e) => queueSearch(e.target.value)}
             className="w-full rounded-lg border border-border bg-secondary py-2.5 pl-10 pr-4 text-sm text-card-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary touch-manipulation"
           />
         </div>
@@ -158,7 +176,8 @@ export function PosHeader({ onSearch, terminalName, cashierName }: PosHeaderProp
               type="text"
               placeholder="Search products..."
               autoFocus
-              onChange={(e) => onSearch(e.target.value)}
+              value={searchValue}
+              onChange={(e) => queueSearch(e.target.value)}
               className="w-full rounded-lg border border-border bg-secondary py-2.5 pl-10 pr-4 text-sm text-card-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary touch-manipulation"
             />
           </div>

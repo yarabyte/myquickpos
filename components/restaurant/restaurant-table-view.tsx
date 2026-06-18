@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useMemo, useCallback } from "react"
+import { useState, useMemo, useCallback, useRef } from "react"
 import { submitTableOrder } from "@/app/actions/table-orders"
 import type { CartItem, Product, Category } from "@/lib/pos-data"
 import { CategoryBar } from "@/components/pos/category-bar"
 import { ProductGrid } from "@/components/pos/product-grid"
+import { toProductCardData } from "@/components/pos/product-card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { formatWithCurrency } from "@/lib/format-currency"
 import { toTitleCase } from "@/lib/utils"
@@ -61,6 +62,18 @@ export function RestaurantTableView({
     return result
   }, [activeCategory, allProducts, getDescendantIds])
 
+  const displayProducts = useMemo(
+    () => toProductCardData(filteredProducts, formatCurrency),
+    [filteredProducts, formatCurrency]
+  )
+
+  const productById = useMemo(
+    () => new Map(allProducts.map((product) => [product.id, product])),
+    [allProducts]
+  )
+  const productByIdRef = useRef(productById)
+  productByIdRef.current = productById
+
   const addToCart = useCallback((product: Product) => {
     setCart((prev) => {
       const existing = prev.find((item) => item.product.id === product.id)
@@ -72,6 +85,11 @@ export function RestaurantTableView({
       return [...prev, { product, quantity: 1 }]
     })
   }, [])
+
+  const addToCartById = useCallback((productId: string) => {
+    const product = productByIdRef.current.get(productId)
+    if (product) addToCart(product)
+  }, [addToCart])
 
   const updateQuantity = useCallback((productId: string, delta: number) => {
     setCart((prev) =>
@@ -146,9 +164,8 @@ export function RestaurantTableView({
           </div>
           <ScrollArea className="flex-1 px-4 pb-4">
             <ProductGrid
-              products={filteredProducts}
-              onAddToCart={addToCart}
-              formatCurrency={formatCurrency}
+              products={displayProducts}
+              onAddToCart={addToCartById}
             />
             {filteredProducts.length === 0 && (
               <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">

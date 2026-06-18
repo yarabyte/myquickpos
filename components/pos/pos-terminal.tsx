@@ -1,12 +1,13 @@
 "use client"
 
-import { useState, useMemo, useCallback } from "react"
+import { useState, useMemo, useCallback, useRef } from "react"
 import { useProducts } from "@/hooks/use-products"
 import { useCategories } from "@/hooks/use-categories"
-import type { CartItem, Product } from "@/lib/pos-data"
+import type { CartItem } from "@/lib/pos-data"
 import { PosHeader } from "./pos-header"
 import { CategoryBar } from "./category-bar"
 import { ProductGrid } from "./product-grid"
+import { toProductCardData } from "./product-card"
 import { OrderPanel } from "./order-panel"
 import { PaymentModal } from "./payment-modal"
 import { QuickActions } from "./quick-actions"
@@ -43,7 +44,26 @@ export function PosTerminal() {
     return result
   }, [activeCategory, searchQuery, allProducts, getDescendantIds])
 
-  const addToCart = useCallback((product: Product) => {
+  const formatCurrency = useCallback(
+    (amount: number) => formatWithCurrency(amount, "USD"),
+    []
+  )
+
+  const displayProducts = useMemo(
+    () => toProductCardData(filteredProducts, formatCurrency),
+    [filteredProducts, formatCurrency]
+  )
+
+  const productById = useMemo(
+    () => new Map(allProducts.map((product) => [product.id, product])),
+    [allProducts]
+  )
+  const productByIdRef = useRef(productById)
+  productByIdRef.current = productById
+
+  const addToCartById = useCallback((productId: string) => {
+    const product = productByIdRef.current.get(productId)
+    if (!product) return
     setCart((prev) => {
       const existing = prev.find((item) => item.product.id === product.id)
       if (existing) {
@@ -109,11 +129,6 @@ export function PosTerminal() {
     }
   }, [lastCart.length])
 
-  const formatCurrency = useCallback(
-    (amount: number) => formatWithCurrency(amount, "USD"),
-    []
-  )
-
   const itemCount = useMemo(
     () => cart.reduce((sum, item) => sum + item.quantity, 0),
     [cart]
@@ -139,11 +154,10 @@ export function PosTerminal() {
 
           <ScrollArea className="flex-1 px-4 pb-4 lg:px-5 lg:pb-5">
             <ProductGrid
-              products={filteredProducts}
-              onAddToCart={addToCart}
-              formatCurrency={formatCurrency}
+              products={displayProducts}
+              onAddToCart={addToCartById}
             />
-            {filteredProducts.length === 0 && (
+            {displayProducts.length === 0 && (
               <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
                 <p className="text-sm">No products found</p>
                 <p className="text-xs mt-1">Try a different category or search</p>
